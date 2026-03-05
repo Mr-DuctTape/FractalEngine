@@ -1,0 +1,39 @@
+# Visual Studio temporary files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+*.sln.docstates
+
+# Build folders
+Debug/
+Release/
+x64/
+x86/
+build/
+
+# Compiler outputs
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+
+# Logs
+*.log
+
+# CMake (if you ever use it)
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+
+# Visual Studio database/cache
+*.VC.db
+*.VC.opendb
+
+# Temporary files
+*.tmp
+*.tlog
