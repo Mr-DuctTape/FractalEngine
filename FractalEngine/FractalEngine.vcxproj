@@ -129,20 +129,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\EntitySystem\ECS.h" />
+    <ClInclude Include="Engine\EntitySystem\Entities.h" />
     <ClInclude Include="Engine\FractalEngine.h" />
     <ClInclude Include="Engine\Input\InputSystem.h" />
     <ClInclude Include="Engine\Rendering\RenderingSystem.h" />
     <ClInclude Include="Engine\Vectors\Vector2D.h" />
+    <ClInclude Include="Engine\Textures\TextureHandling.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\EntitySystem\Entities.cpp" />
     <ClCompile Include="Engine\FractalEngine.cpp" />
     <ClCompile Include="Engine\Input\InputSystem.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="Engine\mainTest.cpp" />
+    <ClCompile Include="Engine\Rendering\Rendering.cpp" />
     <ClCompile Include="Engine\Vectors\Vector2D.cpp" />
+    <ClCompile Include="Engine\Textures\TextureHandling.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SDL3.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

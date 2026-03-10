@@ -11,4 +11,5 @@ namespace FractalEngine
 	extern SDL_Window* window;
 	extern SDL_Renderer* renderer;
 	void Initialize(const char* title, const int width, const int height, const SDL_WindowFlags theme);
+	void Update();
 }

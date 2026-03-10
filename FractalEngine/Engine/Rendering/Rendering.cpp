@@ -1,8 +1,9 @@
 #include "RenderingSystem.h"
 #include "../FractalEngine.h"
+#include "../EntitySystem/Entities.h"
 
-std::vector<int> Rendering::indices = {};
-std::vector<SDL_Vertex> Rendering::vertices = {};
+std::vector<int> indices = {};
+std::vector<SDL_Vertex> vertices = {};
 
 void Rendering::clearScreen()
 {
@@ -23,8 +24,19 @@ void Rendering::clearScreen(SDL_Color color)
 	SDL_SetRenderDrawColor(FractalEngine::renderer, preColor.r, preColor.g, preColor.b, preColor.a);
 }
 
-
 void Rendering::drawScreen()
 {
+	//Doing lazy drawing, gonna make it into indicies and vertices later for performance
+	for (const auto &obj : objects)
+	{
+		const auto* c = obj.get();
 
+		SDL_FRect rect;
+		rect.w = c->sprite->width;
+		rect.h = c->sprite->height;
+		rect.x = c->transform.position.x;
+		rect.y = c->transform.position.y;
+
+		SDL_RenderTexture(FractalEngine::renderer, c->sprite->texture, NULL, &rect);
+	}
 }

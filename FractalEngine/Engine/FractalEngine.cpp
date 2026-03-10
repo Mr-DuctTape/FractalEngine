@@ -17,3 +17,15 @@ void FractalEngine::Initialize(const char* title, const int width, const int hei
 		std::cout << "Fractal Error: Failed to create renderer\n";
 	}
 }
+
+void FractalEngine::Update()
+{
+	for (auto& obj : objects)
+	{
+		auto c = obj.get();
+		if (c->physics2D)
+		{
+
+		}
+	}
+}

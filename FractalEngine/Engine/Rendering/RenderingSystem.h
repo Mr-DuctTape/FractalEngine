@@ -4,9 +4,6 @@
 
 namespace Rendering
 {
-	extern std::vector<int> indices;
-	extern std::vector<SDL_Vertex> vertices;
-
 	void drawScreen();
 	void clearScreen();
 	void clearScreen(SDL_Color color);

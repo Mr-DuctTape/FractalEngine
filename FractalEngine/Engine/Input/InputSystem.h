@@ -7,8 +7,8 @@ namespace Input
 	extern bool previousKeys[SDL_SCANCODE_COUNT];
 	extern bool currentKeys[SDL_SCANCODE_COUNT];
 
-	bool getButton(SDL_Scancode key);
-	bool getButtonDown(SDL_Scancode key);
-	bool getButtonUp(SDL_Scancode key);
-	void process();
+	const bool getButton(SDL_Scancode key);
+	const bool getButtonDown(SDL_Scancode key);
+	const bool getButtonUp(SDL_Scancode key);
+	void Process();
 }

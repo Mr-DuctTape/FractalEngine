@@ -5,7 +5,7 @@ SDL_Event Input::event;
 bool Input::currentKeys[SDL_SCANCODE_COUNT] = { false };
 bool Input::previousKeys[SDL_SCANCODE_COUNT] = { false };
 
-void Input::process()
+void Input::Process()
 {
 	memcpy(previousKeys, currentKeys, sizeof(currentKeys));
 
@@ -19,17 +19,17 @@ void Input::process()
 	}
 }
 
-bool Input::getButtonDown(SDL_Scancode key)
+const bool Input::getButtonDown(SDL_Scancode key) 
 {
 	return currentKeys[key] && !previousKeys[key];
 }
 
-bool Input::getButtonUp(SDL_Scancode key)
+const bool Input::getButtonUp(SDL_Scancode key) 
 {
 	return !currentKeys[key] && previousKeys[key];
 }
 
-bool Input::getButton(SDL_Scancode key)
+const bool Input::getButton(SDL_Scancode key)
 {
 	return currentKeys[key] && previousKeys[key];
 }
