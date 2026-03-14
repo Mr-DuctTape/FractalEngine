@@ -1,33 +1,44 @@
 #include "PhysicsFunctions.h"
 #include "../EntitySystem/Entities.h"
+#include <iostream>
 
 namespace Physics
 {
-	static inline bool checkCollision(CollisionBox collBox1, CollisionBox collBox2) // AABB Collision?
+	static inline bool checkCollision(const Components::CollisionBox collBox1, const Components::CollisionBox collBox2) // AABB Collision?
 	{
-		if (collBox1.minX <= collBox2.maxX && collBox1.maxX >= collBox2.minX && 
+		if (collBox1.minX <= collBox2.maxX && collBox1.maxX >= collBox2.minX &&
 			collBox1.minY <= collBox2.maxY && collBox1.maxY >= collBox2.minY)
+		{
+			std::cout << "Collision\n";
 			return true;
-
+		}
+		std::cout << "No Collision\n";
 		return false;
 	}
 	static void Collide(GameObject* obj, GameObject* other)
 	{
-		float objMass = obj->physics2D->mass;
-		float otherMass = other->physics2D->mass;
+		Components::Physics2D* physicsComponent = obj->getComponent<Components::Physics2D>();
+		Components::Physics2D* otherPhysicsComponent = other->getComponent<Components::Physics2D>();
+
+		float objMass = physicsComponent->mass;
+		float otherMass = otherPhysicsComponent->mass;
 
 		Vector2 objVel = obj->transform.velocity;
 		Vector2 otherVel = obj->transform.velocity;
 
-		//Figure out how collisions work, cause I have no fucking clue rn
+		//Todo: Figure out how collisions work
 	}
 	static inline void updatePhysics(GameObject* object)
 	{
-		CollisionBox collBox = object->getCollisionBox();
+		Components::CollisionBox collBox = object->getCollisionBox();
 		for (size_t i = 0; i < objects.size(); i++)
 		{
 			auto b = objects[i].get();
-			if (checkCollision(collBox, b->getCollisionBox()))
+			if (b == object)
+				continue;
+
+			Components::CollisionBox br = b->getCollisionBox();
+			if (checkCollision(collBox, br))
 			{
 				//Collision happens
 				Collide(object, b);
@@ -40,10 +51,8 @@ namespace Physics
 		for (size_t i = 0; i < objects.size(); i++)
 		{
 			obj = objects[i].get();
-			if(obj->physics2D)
+			if(obj->getComponent<Components::Physics2D>())
 				updatePhysics(obj);
-
-			obj->transform.position += obj->transform.velocity;
 		}
 	}
 }

@@ -3,6 +3,7 @@
 #include "Vectors/Vector2D.h"
 #include "EntitySystem/Entities.h"
 #include "Rendering/RenderingSystem.h"
+#include "Physics/PhysicsFunctions.h"
 
 #include <SDL3/SDL.h>
 

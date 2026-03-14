@@ -30,14 +30,16 @@ void Rendering::drawScreen()
 	//Doing lazy drawing, gonna make it into indicies and vertices later for performance
 	for (const auto &obj : objects)
 	{
-		const auto* c = obj.get();
-		const bool sprite = c->sprite;
+		Components::Sprite* sprite = nullptr;
+		auto* c = obj.get();
+		const bool hasSprite = c->hasComponent<Components::Sprite>();
 
 		SDL_FRect rect;
-		if (sprite)
+		if (hasSprite)
 		{
-			rect.w = c->sprite->width;
-			rect.h = c->sprite->height;
+			sprite = c->getComponent<Components::Sprite>();
+			rect.w = sprite->width;
+			rect.h = sprite->height;
 		}
 		else
 		{
@@ -48,8 +50,8 @@ void Rendering::drawScreen()
 		rect.x = c->transform.position.x;
 		rect.y = c->transform.position.y;
 
-		if (sprite)
-			SDL_RenderTexture(FractalEngine::renderer, c->sprite->texture, NULL, &rect);
+		if (hasSprite)
+			SDL_RenderTexture(FractalEngine::renderer, sprite->texture, NULL, &rect);
 		else
 		{
 			SDL_SetRenderDrawColor(FractalEngine::renderer, 255, 255, 255, 255);
