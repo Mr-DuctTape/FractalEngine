@@ -1,4 +1,5 @@
 #include "FractalEngine.h"
+#include "./Physics/PhysicsFunctions.h"
 #include <iostream>
 
 SDL_Renderer* FractalEngine::renderer = nullptr;
@@ -18,14 +19,8 @@ void FractalEngine::Initialize(const char* title, const int width, const int hei
 	}
 }
 
-void FractalEngine::Update()
+void FractalEngine::Quit()
 {
-	for (auto& obj : objects)
-	{
-		auto c = obj.get();
-		if (c->physics2D)
-		{
-
-		}
-	}
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
 }

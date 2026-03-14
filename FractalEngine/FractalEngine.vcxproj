@@ -132,6 +132,7 @@
     <ClInclude Include="Engine\EntitySystem\Entities.h" />
     <ClInclude Include="Engine\FractalEngine.h" />
     <ClInclude Include="Engine\Input\InputSystem.h" />
+    <ClInclude Include="Engine\Physics\PhysicsFunctions.h" />
     <ClInclude Include="Engine\Rendering\RenderingSystem.h" />
     <ClInclude Include="Engine\Vectors\Vector2D.h" />
     <ClInclude Include="Engine\Textures\TextureHandling.h" />
@@ -144,6 +145,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="Engine\mainTest.cpp" />
+    <ClCompile Include="Engine\Physics\PhysicsFunctions.cpp" />
     <ClCompile Include="Engine\Rendering\Rendering.cpp" />
     <ClCompile Include="Engine\Vectors\Vector2D.cpp" />
     <ClCompile Include="Engine\Textures\TextureHandling.cpp" />

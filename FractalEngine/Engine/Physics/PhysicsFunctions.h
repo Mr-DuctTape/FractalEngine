@@ -2,5 +2,9 @@
 #include "../EntitySystem/Entities.h"
 namespace Physics
 {
-	void updatePhysics(GameObject* object);
+	namespace Constants
+	{
+		const float worldGravity = 1.0f;
+	}
+	void Run();
 }

@@ -1,6 +1,7 @@
 #include "RenderingSystem.h"
 #include "../FractalEngine.h"
 #include "../EntitySystem/Entities.h"
+#include <iostream>
 
 std::vector<int> indices = {};
 std::vector<SDL_Vertex> vertices = {};
@@ -30,13 +31,32 @@ void Rendering::drawScreen()
 	for (const auto &obj : objects)
 	{
 		const auto* c = obj.get();
+		const bool sprite = c->sprite;
 
 		SDL_FRect rect;
-		rect.w = c->sprite->width;
-		rect.h = c->sprite->height;
+		if (sprite)
+		{
+			rect.w = c->sprite->width;
+			rect.h = c->sprite->height;
+		}
+		else
+		{
+			rect.w = 150;
+			rect.h = 150;
+		}
+
 		rect.x = c->transform.position.x;
 		rect.y = c->transform.position.y;
 
-		SDL_RenderTexture(FractalEngine::renderer, c->sprite->texture, NULL, &rect);
+		if (sprite)
+			SDL_RenderTexture(FractalEngine::renderer, c->sprite->texture, NULL, &rect);
+		else
+		{
+			SDL_SetRenderDrawColor(FractalEngine::renderer, 255, 255, 255, 255);
+			SDL_RenderRect(FractalEngine::renderer, &rect);
+			SDL_SetRenderDrawColor(FractalEngine::renderer, 0, 0, 0, 0);
+		}
 	}
+
+	SDL_RenderPresent(FractalEngine::renderer);
 }

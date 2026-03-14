@@ -5,7 +5,6 @@
 #include "../Vectors/Vector2D.h"
 
 //Components
-
 struct Transform
 {
 	Vector2 velocity;
@@ -25,11 +24,23 @@ struct Physics2D
 	float gravity = 1.0f;
 	float mass = 1.0f;
 	float friction = 0.2f;
+	float bouncyness = 0.1f;
 };
 
+struct CollisionBox
+{
+	float minY;
+	float maxY;
+	float minX;
+	float maxX;
+};
 ///
 
-class Camera;
+class Camera
+{
+public:
+	Transform transform = {};
+};
 
 class GameObject
 {
@@ -37,6 +48,14 @@ public:
 	Transform transform = {};
 	Sprite* sprite = nullptr;
 	Physics2D* physics2D = nullptr;
+
+	inline CollisionBox getCollisionBox() const
+	{
+		if (sprite)
+			return CollisionBox{ transform.position.y, transform.position.y + sprite->height, transform.position.x, transform.position.x + sprite->width};
+
+		return CollisionBox{transform.position.y, transform.position.y + 150, transform.position.x, transform.position.y + 150};
+	}
 
 	~GameObject()
 	{
@@ -65,6 +84,5 @@ T* addComponent(T* value)
 	{
 		return new T(*value);
 	}
-
 	return new T;
 }
