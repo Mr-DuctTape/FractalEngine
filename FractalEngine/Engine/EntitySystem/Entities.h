@@ -3,6 +3,7 @@
 #include <memory>
 #include <SDL3/SDL.h>
 #include "../Vectors/Vector2D.h"
+#include <iostream>
 
 //
 namespace Components
@@ -28,10 +29,20 @@ namespace Components
 
 	struct Physics2D : public Component
 	{
+		Physics2D() {};
+		Physics2D(float grav, float m, float fric, float bounce)
+		{
+			gravity = grav;
+			mass = m;
+			friction = fric;
+			bouncyness = bounce;
+		}
 		float gravity = 1.0f;
 		float mass = 1.0f;
 		float friction = 0.2f;
 		float bouncyness = 0.1f;
+		int lastFall = SDL_GetTicks();
+		int currentFall = 0;
 	};
 
 	struct CollisionBox : public Component
@@ -95,29 +106,49 @@ public:
 		}
 
 	}
+	int getComponentAmount() const
+	{
+		return objComponents.size();
+	}
+	template <typename T>
+	void addComponent(const T& value)
+	{
+		static_assert(std::is_base_of_v<Components::Component, T>,
+			"T must be a component!");
+		for (size_t i = 0; i < objComponents.size(); i++)
+		{
+			if (T* component = dynamic_cast<T*>(objComponents[i]))
+			{
+				std::cout << "Component is already added\n";
+				return;
+			}
+		}
 
+		T* location = new T(value);
+		objComponents.push_back(location);
+	}
 	template <typename T>
 	void addComponent()
 	{
 		static_assert(std::is_base_of_v<Components::Component, T>,
 			"T must be a component!");
-
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
 			{
+				std::cout << "Component is already added\n";
 				return;
 			}
 		}
+
 		T* location = new T();
 		objComponents.push_back(location);
 	}
 	template <typename T>
-	bool hasComponent() const
+	bool hasComponent()
 	{
 		static_assert(std::is_base_of_v<Components::Component, T>,
 			"T must be a component!");
-
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -132,7 +163,6 @@ public:
 	{
 		static_assert(std::is_base_of_v<Components::Component, T>,
 			"T must be a component!");
-
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -141,6 +171,10 @@ public:
 			}
 		}
 		return nullptr;
+	}
+	GameObject()
+	{
+		objComponents.push_back(&transform);
 	}
 	~GameObject()
 	{

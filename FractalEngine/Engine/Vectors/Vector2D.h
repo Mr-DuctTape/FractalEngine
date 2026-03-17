@@ -16,7 +16,7 @@ struct Vector2
 	}
 
 	Vector2 normalized() const; //Returns a normalized vector
-	void Normalize(); //Normalizes the vectors values
+	void Normalize(); //Normalizes the vector 
 	float length() const; //Returns length of vector
 	float dot() const; //Retuns dot product of vector
 
