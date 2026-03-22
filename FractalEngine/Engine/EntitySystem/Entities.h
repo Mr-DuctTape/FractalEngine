@@ -5,11 +5,14 @@
 #include "../Vectors/Vector2D.h"
 #include <iostream>
 
+class GameObject;
+
 //
 namespace Components
 {
 	struct Component
 	{
+		GameObject* parent = nullptr;
 		virtual ~Component() {};
 	};
 
@@ -30,22 +33,31 @@ namespace Components
 	struct Physics2D : public Component
 	{
 		Physics2D() {};
-		Physics2D(float grav, float m, float fric, float bounce)
+		Physics2D(bool grav, float m, float fric, float bounce)
 		{
 			gravity = grav;
 			mass = m;
 			friction = fric;
 			bouncyness = bounce;
 		}
-		float gravity = 1.0f;
+
+		bool gravity = true;
+
 		float mass = 1.0f;
 		float friction = 0.2f;
 		float bouncyness = 0.1f;
+
 		int lastFall = SDL_GetTicks();
 		int currentFall = 0;
+
+		int beginForceTime = 0;
+		int forceTime = 0;
+
+		Vector2 physicsForce;
+		void addForce(const Vector2 force);
 	};
 
-	struct CollisionBox : public Component
+	struct CollisionBox
 	{
 		CollisionBox()
 		{
@@ -79,8 +91,16 @@ class GameObject
 {
 private:
 	std::vector<Components::Component*> objComponents;
+	inline void push_back(Components::Component* component)
+	{
+		component->parent = this;
+		objComponents.push_back(component);
+	}
+protected:
+	static unsigned int IDNumber;
 public:
 	Components::Transform transform = {};
+	unsigned int ID;
 
 	inline Components::CollisionBox getCollisionBox()
 	{
@@ -125,7 +145,7 @@ public:
 		}
 
 		T* location = new T(value);
-		objComponents.push_back(location);
+		push_back(location);
 	}
 	template <typename T>
 	void addComponent()
@@ -142,10 +162,10 @@ public:
 		}
 
 		T* location = new T();
-		objComponents.push_back(location);
+		push_back(location);
 	}
 	template <typename T>
-	bool hasComponent()
+	bool hasComponent() const
 	{
 		static_assert(std::is_base_of_v<Components::Component, T>,
 			"T must be a component!");
@@ -174,6 +194,8 @@ public:
 	}
 	GameObject()
 	{
+		IDNumber++;
+		ID = IDNumber;
 		objComponents.push_back(&transform);
 	}
 	~GameObject()

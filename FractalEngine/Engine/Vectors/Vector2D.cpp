@@ -110,3 +110,8 @@ void Vector2::operator/= (const float scaler)
 	x /= scaler;
 	y /= scaler;
 }
+
+Vector2 operator* (const float scalar, const Vector2& v)
+{
+	return { v.x * scalar, v.y * scalar };
+}

@@ -20,6 +20,11 @@ struct Vector2
 	float length() const; //Returns length of vector
 	float dot() const; //Retuns dot product of vector
 
+	static float Dot(const Vector2& a, const Vector2& b)
+	{
+		return a.x * b.x + a.y * b.y;
+	}
+
 	void operator= (const Vector2 other); //No return type disallows chaining
 
 	Vector2 operator+ (const Vector2 other) const;
@@ -43,3 +48,5 @@ struct Vector2
 	void operator/= (const Vector2 other);
 	void operator/= (const float scaler);
 };
+
+Vector2 operator* (const float scalar, const Vector2& v);

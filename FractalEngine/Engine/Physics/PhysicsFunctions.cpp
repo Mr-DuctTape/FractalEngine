@@ -6,7 +6,7 @@ using namespace Components;
 
 namespace Physics
 {
-	static inline bool checkCollision(const CollisionBox collBox1, const CollisionBox collBox2) // AABB Collision?
+	inline bool CheckCollision(const CollisionBox collBox1, const CollisionBox collBox2) // AABB Collision?
 	{
 		if (collBox1.minX <= collBox2.maxX && collBox1.maxX >= collBox2.minX &&
 			collBox1.minY <= collBox2.maxY && collBox1.maxY >= collBox2.minY)
@@ -16,72 +16,88 @@ namespace Physics
 		return false;
 	}
 
-	static void Collide(GameObject* obj, GameObject* other)
+	void Collide(GameObject* obj, GameObject* other)
 	{
-		//Todo: Figure out how collisions work
-		Vector2 velocity = obj->transform.velocity;
-		Vector2 otherVelocity = other->transform.velocity;
+		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
 
-		Vector2 temp = velocity;
+		Vector2 relativeVelocity = obj->transform.velocity - other->transform.velocity;
+		float velAlongNormal = Vector2::Dot(relativeVelocity, normal);
 
-		velocity = otherVelocity * Values::friction;
-		otherVelocity = velocity * Values::friction;
-
-		obj->transform.position += velocity;
-		other->transform.position += otherVelocity;
-	}
-
-	static inline void updatePhysics(GameObject* object)
-	{
-		if (!object->hasComponent<Physics2D>())
+		if (velAlongNormal > 0)
 			return;
 
-		int* beginFall = &object->getComponent<Physics2D>()->currentFall;
-		int* lastFall = &object->getComponent<Physics2D>()->lastFall;
 
-		CollisionBox currentBox = object->getCollisionBox();
-		GameObject* collisionObj = nullptr;
-		bool isColliding = false;
+		Vector2 v = obj->transform.velocity;
+		Vector2 n = normal;
 
-		for (size_t i = 0; i < objects.size(); i++)
+		Vector2 reflected = v - 2.0f * Vector2::Dot(v, n) * n;
+
+		obj->transform.velocity = reflected * 0.8f;
+		other->transform.velocity = -reflected * 0.8f;
+
+		Vector2 diff = obj->transform.position - other->transform.position;
+		float distance = sqrt(diff.x * diff.x + diff.y * diff.y);
+
+		float minDist = 1.0f; // depends on your object size
+		float penetration = minDist - distance;
+
+		if (penetration > 0)
 		{
-			collisionObj = objects[i].get();
-			if (collisionObj == object)
+			Vector2 correction = normal * (penetration / 2.0f);
+			obj->transform.position += correction;
+			other->transform.position -= correction;
+			return;
+		}
+
+		obj->transform.position += obj->transform.velocity;
+		if(other->hasComponent<Physics2D>())
+			other->transform.position += other->transform.velocity;
+		std::cout << "X: " << obj->transform.velocity.x << " Y: " << obj->transform.velocity.y << "\n";
+	}
+
+	void Gravity(GameObject* obj, Physics2D* physicsComponent)
+	{
+		physicsComponent->currentFall = SDL_GetTicks();
+		float time = (physicsComponent->currentFall - physicsComponent->lastFall) / 1000.0;
+		obj->transform.velocity.y += Physics::Values::worldGravity * time;
+	}
+
+	void UpdatePhysics(GameObject* object)
+	{
+		Physics2D* physicsComponent = object->getComponent<Physics2D>();
+		if (!physicsComponent)
+			return;
+		
+		if (physicsComponent->gravity)
+		{
+			Gravity(object, physicsComponent);
+			object->transform.position += object->transform.velocity;
+		}
+
+		bool anyCollision = false;
+		for (auto& p : objects)
+		{
+			if (p.get() == object)
 				continue;
 
-			CollisionBox otherBox = collisionObj->getCollisionBox();
-			isColliding = checkCollision(currentBox, otherBox);
-			if (isColliding)
-				break;
+			if (CheckCollision(object->getCollisionBox(), p->getCollisionBox()))
+			{
+				Collide(object, p.get());
+				anyCollision = true;
+			}
 		}
 
-		if (!isColliding)
+		if (!anyCollision)
 		{
-			*beginFall = SDL_GetTicks();
-			float time = (*beginFall - *lastFall) / 1000.0;
-
-			//Apply gravity
-			Transform* objTransform = object->getComponent<Transform>();
-			objTransform->velocity.y = Values::worldGravity * time;
-			objTransform->position += objTransform->velocity;
-		}
-		else
-		{
-			*lastFall = SDL_GetTicks();
-			Transform* objTransform = &object->transform;
-			Sprite* objSprite = collisionObj->getComponent<Sprite>();
-
-			Collide(object, collisionObj);
+			physicsComponent->lastFall = physicsComponent->currentFall;
 		}
 	}
 
 	void Run() // Physics simulation on all GameObjects with Physics2D component
 	{
-		GameObject* obj = nullptr;
 		for (size_t i = 0; i < objects.size(); i++)
 		{
-			obj = objects[i].get();
-			updatePhysics(obj);
+			UpdatePhysics(objects[i].get());
 		}
 	}
 }

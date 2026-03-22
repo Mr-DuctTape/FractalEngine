@@ -8,8 +8,8 @@ int main()
 	GameObject& obj2 = CreateObject<GameObject>();
 	GameObject& obj3 = CreateObject<GameObject>();
 
-	obj.addComponent<Components::Physics2D>(Components::Physics2D(10,20,30,40));
-	obj2.addComponent<Components::Physics2D>(Components::Physics2D(10, 20, 30, 40));
+	obj.addComponent<Components::Physics2D>(Components::Physics2D(9.81, 20, 0.8, 0.0));
+	obj2.addComponent<Components::Physics2D>(Components::Physics2D(10, 20, 0.95, 0));
 
 	obj3.transform.position.x = 600;
 	obj3.transform.position.y = 550;
@@ -21,6 +21,7 @@ int main()
 	obj2.transform.position.y = 200;
 	 
 	std::cout << obj.getComponent<Components::Physics2D>()->mass << "\n";
+
 	bool bing = true;
 	while (bing)
 	{
@@ -28,8 +29,11 @@ int main()
 		Physics::Run();
 		if (Input::getButton(SDL_SCANCODE_SPACE))
 		{
-			obj.transform.position.y -= 10;
-			std::cout << "True\n";
+			obj.transform.velocity.y -= 10;
+		}
+		if (Input::getButton(SDL_SCANCODE_K))
+		{
+			obj2.transform.velocity.y -= 1;
 		}
 		if (Input::getButton(SDL_SCANCODE_0))
 		{
