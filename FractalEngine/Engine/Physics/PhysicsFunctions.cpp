@@ -1,10 +1,10 @@
 #include "PhysicsFunctions.h"
 #include "../EntitySystem/Entities.h"
-#include <iostream>
+#include "../FractalEngineCore.h"
 
 using namespace Components;
 
-namespace Physics
+namespace Functions
 {
 	inline bool CheckCollision(const CollisionBox collBox1, const CollisionBox collBox2) // AABB Collision?
 	{
@@ -18,48 +18,44 @@ namespace Physics
 
 	void Collide(GameObject* obj, GameObject* other)
 	{
-		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
+		Physics2D* physicsComponent = obj->getComponent<Physics2D>();
 
-		Vector2 relativeVelocity = obj->transform.velocity - other->transform.velocity;
-		float velAlongNormal = Vector2::Dot(relativeVelocity, normal);
+		if (!physicsComponent) return;
 
-		if (velAlongNormal > 0)
-			return;
+		CollisionBox objBox = obj->getCollisionBox();
+		CollisionBox otherBox = other->getCollisionBox();
 
-
-		Vector2 v = obj->transform.velocity;
-		Vector2 n = normal;
-
-		Vector2 reflected = v - 2.0f * Vector2::Dot(v, n) * n;
-
-		obj->transform.velocity = reflected * 0.8f;
-		other->transform.velocity = -reflected * 0.8f;
-
-		Vector2 diff = obj->transform.position - other->transform.position;
-		float distance = sqrt(diff.x * diff.x + diff.y * diff.y);
-
-		float minDist = 1.0f; // depends on your object size
-		float penetration = minDist - distance;
-
-		if (penetration > 0)
+		float penetrationX = std::min(objBox.maxX, otherBox.maxX) - std::max(objBox.minX, otherBox.minX);
+		float penetrationY = std::min(objBox.maxY, otherBox.maxY) - std::max(objBox.minY, otherBox.minY);
+		if (penetrationX < penetrationY)
 		{
-			Vector2 correction = normal * (penetration / 2.0f);
-			obj->transform.position += correction;
-			other->transform.position -= correction;
-			return;
+			if (obj->transform.position.x < other->transform.position.x)
+				obj->transform.position.x -= penetrationX;
+			else
+				obj->transform.position.x += penetrationX;
+		}
+		else
+		{
+			if (obj->transform.position.y < other->transform.position.y)
+				obj->transform.position.y -= penetrationY;
+			else
+				obj->transform.position.y += penetrationY;
 		}
 
-		obj->transform.position += obj->transform.velocity;
-		if(other->hasComponent<Physics2D>())
-			other->transform.position += other->transform.velocity;
-		std::cout << "X: " << obj->transform.velocity.x << " Y: " << obj->transform.velocity.y << "\n";
-	}
+		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
 
-	void Gravity(GameObject* obj, Physics2D* physicsComponent)
-	{
-		physicsComponent->currentFall = SDL_GetTicks();
-		float time = (physicsComponent->currentFall - physicsComponent->lastFall) / 1000.0;
-		obj->transform.velocity.y += Physics::Values::worldGravity * time;
+		if (normal.length() == 0) normal = Vector2(0, 1);
+		else normal = normal.normalized();
+
+		Vector2 direction = (physicsComponent->velocity).normalized();
+		Vector2 newDir = (normal - direction).normalized();
+
+		Physics2D* otherPhysics = other->getComponent<Physics2D>();;
+		if (otherPhysics)
+		{
+			otherPhysics->velocity = -Vector2::reflect(physicsComponent->velocity, normal) * Physics::Values::friction;
+		}
+		physicsComponent->velocity = Vector2::reflect(physicsComponent->velocity, normal) * Physics::Values::friction;
 	}
 
 	void UpdatePhysics(GameObject* object)
@@ -67,12 +63,11 @@ namespace Physics
 		Physics2D* physicsComponent = object->getComponent<Physics2D>();
 		if (!physicsComponent)
 			return;
+
+		float time = FractalEngineCore::deltaTime;
 		
-		if (physicsComponent->gravity)
-		{
-			Gravity(object, physicsComponent);
-			object->transform.position += object->transform.velocity;
-		}
+		//add the force
+		physicsComponent->acceleration = physicsComponent->force / physicsComponent->mass;
 
 		bool anyCollision = false;
 		for (auto& p : objects)
@@ -89,15 +84,24 @@ namespace Physics
 
 		if (!anyCollision)
 		{
-			physicsComponent->lastFall = physicsComponent->currentFall;
+			if (physicsComponent->useGravity)
+			{
+				physicsComponent->acceleration.y += Physics::Values::worldGravity;
+			}
 		}
-	}
 
-	void Run() // Physics simulation on all GameObjects with Physics2D component
+		physicsComponent->velocity += physicsComponent->acceleration * time;
+		object->transform.position += physicsComponent->velocity * time;
+
+		physicsComponent->force.x = 0;
+		physicsComponent->force.y = 0;
+	}
+}
+
+void Physics::Run() // Physics simulation on all GameObjects with Physics2D component
+{
+	for (size_t i = 0; i < objects.size(); i++)
 	{
-		for (size_t i = 0; i < objects.size(); i++)
-		{
-			UpdatePhysics(objects[i].get());
-		}
+		Functions::UpdatePhysics(objects[i].get());
 	}
 }

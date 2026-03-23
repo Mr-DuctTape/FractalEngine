@@ -1,5 +1,5 @@
 #include "TextureHandling.h"
-#include "../FractalEngine.h"
+#include "../FractalEngineCore.h"
 #include <iostream>
 
 SDL_Texture* Textures::CreateTextureBMP(const char* path)
@@ -12,5 +12,5 @@ SDL_Texture* Textures::CreateTextureBMP(const char* path)
 		return nullptr;
 	}
 	else
-		return SDL_CreateTextureFromSurface(FractalEngine::renderer, imageSpecs);
+		return SDL_CreateTextureFromSurface(FractalEngineCore::renderer, imageSpecs);
 }

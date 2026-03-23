@@ -14,12 +14,11 @@ struct Vector2
 		x = posX;
 		y = posY;
 	}
-
+	static Vector2 reflect(const Vector2& v, const Vector2& n);
 	Vector2 normalized() const; //Returns a normalized vector
 	void Normalize(); //Normalizes the vector 
 	float length() const; //Returns length of vector
-	float dot() const; //Retuns dot product of vector
-
+	
 	static float Dot(const Vector2& a, const Vector2& b)
 	{
 		return a.x * b.x + a.y * b.y;

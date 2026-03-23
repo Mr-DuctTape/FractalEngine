@@ -4,8 +4,8 @@ namespace Physics
 {
 	namespace Values
 	{
-		const float worldGravity = 9.81f;
-		const float friction = 0.7f;
+		const float worldGravity = 980.0f;
+		const float friction = 0.90f;
 	}
 	void Run();
 }

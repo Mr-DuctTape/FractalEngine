@@ -3,9 +3,11 @@
 #include <memory>
 #include <SDL3/SDL.h>
 #include "../Vectors/Vector2D.h"
-#include <iostream>
 
 class GameObject;
+
+extern unsigned int* screenWidth;
+extern unsigned int* screenHeight;
 
 //
 namespace Components
@@ -18,7 +20,6 @@ namespace Components
 
 	struct Transform : public Component
 	{
-		Vector2 velocity;
 		Vector2 position;
 		float rotation = 0.0;
 	};
@@ -27,34 +28,22 @@ namespace Components
 	{
 		SDL_Texture* texture;
 		SDL_Color color;
-		float width, height;
+		float width;
+		float height;
 	};
 
 	struct Physics2D : public Component
 	{
-		Physics2D() {};
-		Physics2D(bool grav, float m, float fric, float bounce)
-		{
-			gravity = grav;
-			mass = m;
-			friction = fric;
-			bouncyness = bounce;
-		}
-
-		bool gravity = true;
+		Vector2 acceleration;
+		Vector2 velocity;
+		Vector2 force;
 
 		float mass = 1.0f;
-		float friction = 0.2f;
-		float bouncyness = 0.1f;
-
-		int lastFall = SDL_GetTicks();
-		int currentFall = 0;
-
-		int beginForceTime = 0;
-		int forceTime = 0;
-
-		Vector2 physicsForce;
-		void addForce(const Vector2 force);
+		bool useGravity = true;
+		void addForce(const Vector2& force_)
+		{
+			force += (force_ * 1000.0);
+		}
 	};
 
 	struct CollisionBox
@@ -80,12 +69,6 @@ namespace Components
 	};
 }
 //
-
-class Camera
-{
-public:
-	Components::Transform transform = {};
-};
 
 class GameObject
 {
@@ -133,42 +116,35 @@ public:
 	template <typename T>
 	void addComponent(const T& value)
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,
-			"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
 			{
-				std::cout << "Component is already added\n";
 				return;
 			}
 		}
-
 		T* location = new T(value);
 		push_back(location);
 	}
 	template <typename T>
 	void addComponent()
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,
-			"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
 			{
-				std::cout << "Component is already added\n";
 				return;
 			}
 		}
-
 		T* location = new T();
 		push_back(location);
 	}
 	template <typename T>
 	bool hasComponent() const
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,
-			"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -181,8 +157,7 @@ public:
 	template <typename T>
 	T* getComponent()
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,
-			"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -207,6 +182,23 @@ public:
 	}
 };
 
+class Camera
+{
+public:
+	Components::Transform transform;
+	void follow(const GameObject& other)
+	{
+		transform.position.x = other.transform.position.x - *screenWidth / 2;
+		transform.position.y = other.transform.position.y - *screenHeight / 2;
+	}
+	void follow(const Vector2& position)
+	{
+		transform.position.x = position.x - *screenWidth / 2;
+		transform.position.y = position.y - *screenHeight / 2;
+	}
+};
+
+extern Camera camera;
 extern std::vector<std::unique_ptr<GameObject>> objects;
 
 template <typename T>

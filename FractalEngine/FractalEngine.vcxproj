@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClInclude Include="Engine\EntitySystem\Entities.h" />
     <ClInclude Include="Engine\FractalEngine.h" />
+    <ClInclude Include="Engine\FractalEngineCore.h" />
     <ClInclude Include="Engine\Input\InputSystem.h" />
     <ClInclude Include="Engine\Physics\PhysicsFunctions.h" />
     <ClInclude Include="Engine\Rendering\RenderingSystem.h" />
@@ -139,7 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\EntitySystem\Entities.cpp" />
-    <ClCompile Include="Engine\FractalEngine.cpp" />
+    <ClCompile Include="Engine\FractalEngineCore.cpp" />
     <ClCompile Include="Engine\Input\InputSystem.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
