@@ -3,13 +3,23 @@
 
 int main()
 {
-	FractalEngineCore::Initialize("Hello", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	FractalEngine::Initialize();
 
 	GameObject& obj = CreateObject<GameObject>();
 	GameObject& obj2 = CreateObject<GameObject>();
 	GameObject& obj3 = CreateObject<GameObject>();
 	GameObject& obj4 = CreateObject<GameObject>();
 
+	SceneManager::createScene("Test2");
+	SceneManager::loadScene("Test2");
+
+	GameObject& test = CreateObject<GameObject>();
+	GameObject& test2 = CreateObject<GameObject>();
+
+	test.transform.position = { 600, 500 };
+	test2.transform.position = { 600, 50 };
+
+	test2.addComponent<Components::Physics2D>();
 	obj.addComponent<Components::Physics2D>(Components::Physics2D());
 	obj2.addComponent<Components::Physics2D>(Components::Physics2D());
 	obj4.addComponent<Components::Physics2D>(Components::Physics2D());
@@ -30,21 +40,19 @@ int main()
 
 	bool bing = true;
 
-	while (bing)
+	while (FractalEngine::running)
 	{
-		FractalEngineCore::Run();
-		Input::Process();
-		std::cout << FractalEngineCore::deltaTime << "\n";
-		if (Input::getButtonDown(SDL_SCANCODE_2))
-		{
-			Components::Physics2D* phys = obj4.getComponent<Components::Physics2D>();
-			phys->addForce({0.0, -50.0});
-		}
-		Physics::Run();
-		Rendering::clearScreen();
-		Rendering::drawScreen();
+		Scene* current = SceneManager::getCurrentScene();
+		std::cout << "\033[2J\033[1;1H";
+		std::cout << "Current scene: " << current->name << "\n";
+		FractalEngine::start();
+		if (Input::getButtonDown(SDL_SCANCODE_0))
+			SceneManager::loadScene("Default");
+		if (Input::getButtonDown(SDL_SCANCODE_3))
+			SceneManager::loadScene("Test2");
+		if (Input::getButtonDown(SDL_SCANCODE_4))
+			FractalEngine::stop();
 	}
 
-	FractalEngineCore::Quit();
 	return 0;
 }

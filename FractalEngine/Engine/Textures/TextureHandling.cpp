@@ -1,5 +1,5 @@
 #include "TextureHandling.h"
-#include "../FractalEngineCore.h"
+#include "../Core/FractalEngineCore.h"
 #include <iostream>
 
 SDL_Texture* Textures::CreateTextureBMP(const char* path)

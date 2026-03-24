@@ -2,9 +2,12 @@
 #include <SDL3/SDL.h>
 #include <vector>
 
-namespace Rendering
+class Scene;
+
+class Rendering
 {
-	void drawScreen();
-	void clearScreen();
-	void clearScreen(SDL_Color color);
-}
+public:
+	static void clearScreen();
+	static void clearScreen(SDL_Color color);
+	static void drawScreen(Scene* scene);
+};

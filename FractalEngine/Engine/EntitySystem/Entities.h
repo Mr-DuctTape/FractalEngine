@@ -4,10 +4,16 @@
 #include <SDL3/SDL.h>
 #include "../Vectors/Vector2D.h"
 
+class SceneManager;
+#include "../SceneManagement/FractalScene.h"
+
 class GameObject;
 
-extern unsigned int* screenWidth;
-extern unsigned int* screenHeight;
+class Object
+{
+public:
+	virtual ~Object() {};
+};
 
 //
 namespace Components
@@ -70,7 +76,7 @@ namespace Components
 }
 //
 
-class GameObject
+class GameObject : public Object
 {
 private:
 	std::vector<Components::Component*> objComponents;
@@ -79,7 +85,6 @@ private:
 		component->parent = this;
 		objComponents.push_back(component);
 	}
-protected:
 	static unsigned int IDNumber;
 public:
 	Components::Transform transform = {};
@@ -124,8 +129,8 @@ public:
 				return;
 			}
 		}
-		T* location = new T(value);
-		push_back(location);
+		T* component = new T(value);
+		push_back(component);
 	}
 	template <typename T>
 	void addComponent()
@@ -138,8 +143,8 @@ public:
 				return;
 			}
 		}
-		T* location = new T();
-		push_back(location);
+		T* component = new T();
+		push_back(component);
 	}
 	template <typename T>
 	bool hasComponent() const
@@ -173,39 +178,36 @@ public:
 		ID = IDNumber;
 		objComponents.push_back(&transform);
 	}
-	~GameObject()
-	{
-		for (size_t i = 0; i < objComponents.size(); i++)
-		{
-			delete objComponents[i];
-		}
-	}
 };
 
 class Camera
 {
+private:
+	static unsigned int& screenWidth;
+	static unsigned int& screenHeight;
 public:
 	Components::Transform transform;
 	void follow(const GameObject& other)
 	{
-		transform.position.x = other.transform.position.x - *screenWidth / 2;
-		transform.position.y = other.transform.position.y - *screenHeight / 2;
+		transform.position.x = other.transform.position.x - screenWidth / 2;
+		transform.position.y = other.transform.position.y - screenHeight / 2;
 	}
 	void follow(const Vector2& position)
 	{
-		transform.position.x = position.x - *screenWidth / 2;
-		transform.position.y = position.y - *screenHeight / 2;
+		transform.position.x = position.x - screenWidth / 2;
+		transform.position.y = position.y - screenHeight / 2;
 	}
 };
 
 extern Camera camera;
-extern std::vector<std::unique_ptr<GameObject>> objects;
 
-template <typename T>
-T& CreateObject()
+/// 
+/// 
+///
+template <typename T> //Creates object on the current active scene
+T& CreateObject() 
 {
-	auto obj = std::make_unique<T>();
-	auto location = obj.get();
-	objects.push_back(std::move(obj));
+	auto location = new T();
+	SceneManager::getCurrentScene()->objects.push_back(location);
 	return *location;
 }

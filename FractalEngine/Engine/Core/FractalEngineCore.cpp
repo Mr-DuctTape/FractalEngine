@@ -1,4 +1,6 @@
 #include "FractalEngineCore.h"
+#include "../SceneManagement/FractalScene.h"
+
 #include <iostream>
 
 SDL_Renderer* FractalEngineCore::renderer = nullptr;
@@ -8,7 +10,13 @@ unsigned int FractalEngineCore::height = 0;
 float FractalEngineCore::deltaTime = 0;
 Uint64 previous;
 
-void FractalEngineCore::Initialize(const char* title, const int w, const int h, SDL_WindowFlags theme)
+void FractalEngineCore::Initialize()
+{
+	if (!SceneManager::getCurrentScene())
+		SceneManager::createDefault();
+}
+
+void FractalEngineCore::CreateWindow(const char* title, const int w, const int h, SDL_WindowFlags theme)
 {
 	previous = 0;
 	width = w;
@@ -23,12 +31,14 @@ void FractalEngineCore::Initialize(const char* title, const int w, const int h, 
 	{
 		std::cout << "Fractal Error: Failed to create renderer\n";
 	}
+	FractalEngineCore::Initialize();
 }
 
 void FractalEngineCore::Run() //Background stuff like deltatime etc
 {
 	if (previous == 0)
 		previous = SDL_GetPerformanceCounter();
+
 	Uint64 now = SDL_GetPerformanceCounter();
 	FractalEngineCore::deltaTime = (float)(now - previous) / SDL_GetPerformanceFrequency();
 	previous = now;

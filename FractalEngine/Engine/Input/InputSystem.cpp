@@ -1,6 +1,5 @@
 #include "InputSystem.h"
-
-SDL_Event Input::event;
+#include "../FractalEngine.h"
 
 bool Input::currentKeys[SDL_SCANCODE_COUNT] = { false };
 bool Input::previousKeys[SDL_SCANCODE_COUNT] = { false };
@@ -19,12 +18,12 @@ void Input::Process()
 	}
 }
 
-const bool Input::getButtonDown(SDL_Scancode key) 
+const bool Input::getButtonDown(SDL_Scancode key)
 {
 	return currentKeys[key] && !previousKeys[key];
 }
 
-const bool Input::getButtonUp(SDL_Scancode key) 
+const bool Input::getButtonUp(SDL_Scancode key)
 {
 	return !currentKeys[key] && previousKeys[key];
 }

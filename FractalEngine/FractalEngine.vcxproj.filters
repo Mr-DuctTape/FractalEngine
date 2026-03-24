@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\FractalEngineCore.h">
+    <ClInclude Include="Engine\Core\FractalEngineCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\EntitySystem\Entities.h">
@@ -39,6 +39,9 @@
     <ClInclude Include="Engine\FractalEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\SceneManagement\FractalScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\mainTest.cpp">
@@ -47,7 +50,7 @@
     <ClCompile Include="Engine\Input\InputSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\FractalEngineCore.cpp">
+    <ClCompile Include="Engine\Core\FractalEngineCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Vectors\Vector2D.cpp">
@@ -63,6 +66,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Physics\PhysicsFunctions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneManagement\FractalScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\FractalEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

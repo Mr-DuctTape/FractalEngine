@@ -1,6 +1,6 @@
 #include "PhysicsFunctions.h"
 #include "../EntitySystem/Entities.h"
-#include "../FractalEngineCore.h"
+#include "../Core/FractalEngineCore.h"
 
 using namespace Components;
 
@@ -43,7 +43,6 @@ namespace Functions
 		}
 
 		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
-
 		if (normal.length() == 0) normal = Vector2(0, 1);
 		else normal = normal.normalized();
 
@@ -64,24 +63,26 @@ namespace Functions
 		if (!physicsComponent)
 			return;
 
-		float time = FractalEngineCore::deltaTime;
-		
-		//add the force
 		physicsComponent->acceleration = physicsComponent->force / physicsComponent->mass;
 
 		bool anyCollision = false;
+		auto &objects = SceneManager::getCurrentScene()->objects;
+
 		for (auto& p : objects)
 		{
-			if (p.get() == object)
+			auto other = dynamic_cast<GameObject*>(p);
+
+			if (!other) 
+				continue;
+			if (other == object)
 				continue;
 
-			if (CheckCollision(object->getCollisionBox(), p->getCollisionBox()))
+			if (CheckCollision(object->getCollisionBox(), other->getCollisionBox()))
 			{
-				Collide(object, p.get());
+				Collide(object, other);
 				anyCollision = true;
 			}
 		}
-
 		if (!anyCollision)
 		{
 			if (physicsComponent->useGravity)
@@ -90,6 +91,7 @@ namespace Functions
 			}
 		}
 
+		float& time = FractalEngineCore::deltaTime;
 		physicsComponent->velocity += physicsComponent->acceleration * time;
 		object->transform.position += physicsComponent->velocity * time;
 
@@ -98,10 +100,12 @@ namespace Functions
 	}
 }
 
-void Physics::Run() // Physics simulation on all GameObjects with Physics2D component
+void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all GameObjects with Physics2D component
 {
 	for (size_t i = 0; i < objects.size(); i++)
 	{
-		Functions::UpdatePhysics(objects[i].get());
+		GameObject* obj = dynamic_cast<GameObject*>(objects[i]);
+		if(obj)
+			Functions::UpdatePhysics(obj);
 	}
 }

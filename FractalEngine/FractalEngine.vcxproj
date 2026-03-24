@@ -131,16 +131,18 @@
   <ItemGroup>
     <ClInclude Include="Engine\EntitySystem\Entities.h" />
     <ClInclude Include="Engine\FractalEngine.h" />
-    <ClInclude Include="Engine\FractalEngineCore.h" />
+    <ClInclude Include="Engine\Core\FractalEngineCore.h" />
     <ClInclude Include="Engine\Input\InputSystem.h" />
     <ClInclude Include="Engine\Physics\PhysicsFunctions.h" />
     <ClInclude Include="Engine\Rendering\RenderingSystem.h" />
+    <ClInclude Include="Engine\SceneManagement\FractalScene.h" />
     <ClInclude Include="Engine\Vectors\Vector2D.h" />
     <ClInclude Include="Engine\Textures\TextureHandling.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\EntitySystem\Entities.cpp" />
-    <ClCompile Include="Engine\FractalEngineCore.cpp" />
+    <ClCompile Include="Engine\FractalEngine.cpp" />
+    <ClCompile Include="Engine\Core\FractalEngineCore.cpp" />
     <ClCompile Include="Engine\Input\InputSystem.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -148,6 +150,7 @@
     <ClCompile Include="Engine\mainTest.cpp" />
     <ClCompile Include="Engine\Physics\PhysicsFunctions.cpp" />
     <ClCompile Include="Engine\Rendering\Rendering.cpp" />
+    <ClCompile Include="Engine\SceneManagement\FractalScene.cpp" />
     <ClCompile Include="Engine\Vectors\Vector2D.cpp" />
     <ClCompile Include="Engine\Textures\TextureHandling.cpp" />
   </ItemGroup>

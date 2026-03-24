@@ -1,6 +1,7 @@
 #include "RenderingSystem.h"
-#include "../FractalEngineCore.h"
+#include "../Core/FractalEngineCore.h"
 #include "../EntitySystem/Entities.h"
+#include "../SceneManagement/FractalScene.h"
 #include <iostream>
 
 std::vector<int> indices = {};
@@ -25,13 +26,16 @@ void Rendering::clearScreen(SDL_Color color)
 	SDL_SetRenderDrawColor(FractalEngineCore::renderer, preColor.r, preColor.g, preColor.b, preColor.a);
 }
 
-void Rendering::drawScreen()
+void Rendering::drawScreen(Scene* scene)
 {
 	//Doing lazy drawing, gonna make it into indicies and vertices later for performance
-	for (const auto &obj : objects)
+	for (const auto &b : scene->objects)
 	{
+		GameObject* c = dynamic_cast<GameObject*>(b);
+		if (!c)
+			return;
+
 		Components::Sprite* sprite = nullptr;
-		auto* c = obj.get();
 		const bool hasSprite = c->hasComponent<Components::Sprite>();
 
 		SDL_FRect rect;
