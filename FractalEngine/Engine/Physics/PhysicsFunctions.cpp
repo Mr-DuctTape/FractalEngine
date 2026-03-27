@@ -6,7 +6,7 @@ using namespace Components;
 
 namespace Functions
 {
-	inline bool CheckCollision(const CollisionBox collBox1, const CollisionBox collBox2) // AABB Collision?
+	inline bool CheckCollision(const CollisionBox& collBox1, const CollisionBox& collBox2) // AABB Collision?
 	{
 		if (collBox1.minX <= collBox2.maxX && collBox1.maxX >= collBox2.minX &&
 			collBox1.minY <= collBox2.maxY && collBox1.maxY >= collBox2.minY)
@@ -22,11 +22,12 @@ namespace Functions
 
 		if (!physicsComponent) return;
 
-		CollisionBox objBox = obj->getCollisionBox();
-		CollisionBox otherBox = other->getCollisionBox();
+		const CollisionBox objBox = obj->getCollisionBox();
+		const CollisionBox otherBox = other->getCollisionBox();
 
-		float penetrationX = std::min(objBox.maxX, otherBox.maxX) - std::max(objBox.minX, otherBox.minX);
-		float penetrationY = std::min(objBox.maxY, otherBox.maxY) - std::max(objBox.minY, otherBox.minY);
+		const float penetrationX = std::min(objBox.maxX, otherBox.maxX) - std::max(objBox.minX, otherBox.minX);
+		const float penetrationY = std::min(objBox.maxY, otherBox.maxY) - std::max(objBox.minY, otherBox.minY);
+
 		if (penetrationX < penetrationY)
 		{
 			if (obj->transform.position.x < other->transform.position.x)
@@ -45,9 +46,6 @@ namespace Functions
 		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
 		if (normal.length() == 0) normal = Vector2(0, 1);
 		else normal = normal.normalized();
-
-		Vector2 direction = (physicsComponent->velocity).normalized();
-		Vector2 newDir = (normal - direction).normalized();
 
 		Physics2D* otherPhysics = other->getComponent<Physics2D>();;
 		if (otherPhysics)

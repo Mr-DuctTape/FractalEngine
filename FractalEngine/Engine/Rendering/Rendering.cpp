@@ -4,65 +4,107 @@
 #include "../SceneManagement/FractalScene.h"
 #include <iostream>
 
-std::vector<int> indices = {};
-std::vector<SDL_Vertex> vertices = {};
+float Rendering::cosTable[360] = {};
+float Rendering::sinTable[360] = {};
 
-void Rendering::clearScreen()
+SDL_Renderer* Rendering::renderer = nullptr;
+
+std::vector<Rendering::Line> Rendering::Lines = {};
+std::vector<int> Rendering::Indices = {};
+std::vector<SDL_Vertex> Rendering::Vertices = {};
+
+SDL_FColor toFColor(const SDL_Color& c)
 {
-	SDL_Color preColor;
-	SDL_GetRenderDrawColor(FractalEngineCore::renderer, &preColor.r, &preColor.g, &preColor.b, &preColor.a);
-	SDL_Color color{ 0,0,0,255 };
-	SDL_SetRenderDrawColor(FractalEngineCore::renderer, color.r, color.g, color.b, color.a);
-	SDL_RenderClear(FractalEngineCore::renderer);
-	SDL_SetRenderDrawColor(FractalEngineCore::renderer, preColor.r, preColor.g, preColor.b, preColor.a);
+	return SDL_FColor{
+		c.r / 255.0f,
+		c.g / 255.0f,
+		c.b / 255.0f,
+		c.a / 255.0f
+	};
 }
 
 void Rendering::clearScreen(SDL_Color color)
 {
 	SDL_Color preColor;
-	SDL_GetRenderDrawColor(FractalEngineCore::renderer, &preColor.r, &preColor.g, &preColor.b, &preColor.a);
-	SDL_SetRenderDrawColor(FractalEngineCore::renderer, color.r, color.g, color.b, color.a);
-	SDL_RenderClear(FractalEngineCore::renderer);
-	SDL_SetRenderDrawColor(FractalEngineCore::renderer, preColor.r, preColor.g, preColor.b, preColor.a);
+	SDL_GetRenderDrawColor(Rendering::renderer, &preColor.r, &preColor.g, &preColor.b, &preColor.a);
+	SDL_SetRenderDrawColor(Rendering::renderer, color.r, color.g, color.b, color.a);
+	SDL_RenderClear(Rendering::renderer);
+	SDL_SetRenderDrawColor(Rendering::renderer, preColor.r, preColor.g, preColor.b, preColor.a);
 }
 
-void Rendering::drawScreen(Scene* scene)
+void Rendering::drawLine(float x1, float y1, float x2, float y2, SDL_Color color)
 {
-	//Doing lazy drawing, gonna make it into indicies and vertices later for performance
-	for (const auto &b : scene->objects)
+	Rendering::Lines.emplace_back(Line{ x1, y1, x2, y2, color });
+}
+
+void Rendering::drawQuad(float x, float y, float w, float h, float rotation, const SDL_Color& color)
+{
+	SDL_FColor quadColor = toFColor(color);
+
+	SDL_Vertex vertices[4] =
 	{
-		GameObject* c = dynamic_cast<GameObject*>(b);
-		if (!c)
-			return;
+		{x, y},
+		{ x + w, y },
+		{ x, y + h },
+		{ x + w, y + h }
+	};
 
-		Components::Sprite* sprite = nullptr;
-		const bool hasSprite = c->hasComponent<Components::Sprite>();
+	const int index = static_cast<int>(rotation) % 360;
+	const float cos = cosTable[index];
+	const float sin = sinTable[index];
+	SDL_FPoint center = { w / 2.0 + x,  h / 2.0 + y };
 
-		SDL_FRect rect;
-		if (hasSprite)
-		{
-			sprite = c->getComponent<Components::Sprite>();
-			rect.w = sprite->width;
-			rect.h = sprite->height;
-		}
-		else
-		{
-			rect.w = 150;
-			rect.h = 150;
-		}
+	const int startIndex = Rendering::Vertices.size();
 
-		rect.x = c->transform.position.x - camera.transform.position.x;
-		rect.y = c->transform.position.y - camera.transform.position.y;
+	for (size_t i = 0; i < 4; i++)
+	{
+		//Rotation
+		float vx = vertices[i].position.x;
+		float vy = vertices[i].position.y;
 
-		if (hasSprite)
-			SDL_RenderTexture(FractalEngineCore::renderer, sprite->texture, NULL, &rect);
-		else
-		{
-			SDL_SetRenderDrawColor(FractalEngineCore::renderer, 255, 255, 255, 255);
-			SDL_RenderRect(FractalEngineCore::renderer, &rect);
-			SDL_SetRenderDrawColor(FractalEngineCore::renderer, 0, 0, 0, 0);
-		}
+		vertices[i].position.x = (vx - center.x) * cos - (vy - center.y) * sin + center.x;
+		vertices[i].position.y = (vx - center.x) * sin + (vy - center.y) * cos + center.y;
+		//
+
+		vertices[i].color = quadColor;
+		Rendering::Vertices.push_back(vertices[i]);
 	}
 
-	SDL_RenderPresent(FractalEngineCore::renderer);
+	int indices[6] =
+	{
+		0 + startIndex,1 + startIndex,2 + startIndex, //First triangle
+		2 + startIndex,1 + startIndex,3 + startIndex //Second triangle
+	};
+
+	for (size_t i = 0; i < 6; i++)
+	{
+		Rendering::Indices.push_back(indices[i]);
+	}
+
+}
+
+void Rendering::pushToScreen()
+{
+	SDL_RenderGeometry(
+		Rendering::getRenderer(),
+		NULL, //Texture to use
+		Rendering::Vertices.data(),
+		Rendering::Vertices.size(),
+		Rendering::Indices.data(),
+		Rendering::Indices.size());
+
+	SDL_Color color;
+	SDL_GetRenderDrawColor(Rendering::renderer, &color.r, &color.g, &color.b, &color.a);
+
+	if(!Lines.empty())
+		for (size_t i = 0; i < Lines.size(); i++)
+		{
+			SDL_SetRenderDrawColor(Rendering::getRenderer(), Lines[i].color.r, Lines[i].color.g, Lines[i].color.b, Lines[i].color.a);
+			SDL_RenderLine(Rendering::renderer, Lines[i].x1, Lines[i].y1, Lines[i].x2, Lines[i].y2);
+		}
+
+	SDL_SetRenderDrawColor(Rendering::renderer, color.r, color.g, color.b, color.a);
+	SDL_RenderPresent(Rendering::renderer);
+	Rendering::Vertices.clear();
+	Rendering::Indices.clear();
 }

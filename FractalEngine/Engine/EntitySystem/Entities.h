@@ -52,8 +52,18 @@ namespace Components
 		}
 	};
 
+	struct Animator : public Component
+	{
+		void Play(const std::string& name);
+		void Stop(const std::string& name);
+	};
+
 	struct CollisionBox
 	{
+		float minY;
+		float maxY;
+		float minX;
+		float maxX;
 		CollisionBox()
 		{
 			minY = 0;
@@ -68,13 +78,13 @@ namespace Components
 			minX = mnX;
 			maxX = mxX;
 		}
-		float minY;
-		float maxY;
-		float minX;
-		float maxX;
 	};
 }
 //
+class TileMap
+{
+
+};
 
 class GameObject : public Object
 {
@@ -174,9 +184,16 @@ public:
 	}
 	GameObject()
 	{
-		IDNumber++;
-		ID = IDNumber;
+		ID = ++IDNumber;
 		objComponents.push_back(&transform);
+	}
+	~GameObject()
+	{
+		for (auto objComp : objComponents)
+		{
+			if (objComp == &transform) continue;
+			delete objComp;
+		}
 	}
 };
 

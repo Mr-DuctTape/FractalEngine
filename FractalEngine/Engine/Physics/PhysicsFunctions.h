@@ -6,8 +6,8 @@ namespace Physics
 {
 	namespace Values
 	{
-		const float worldGravity = 980.0f;
-		const float friction = 0.90f;
+		constexpr float worldGravity = 980.0f;
+		constexpr float friction = 0.95f;
 	}
 	void Run(std::vector<Object*>& objects);
 }

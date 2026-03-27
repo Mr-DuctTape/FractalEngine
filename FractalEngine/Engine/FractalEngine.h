@@ -24,21 +24,24 @@ public:
 	static bool running;
 	static void start()
 	{
-		FractalEngineCore::Run();
+		FractalEngineCore::DeltaTime();
 		Input::Process();
-		std::thread PhysicsThread(Physics);
-		std::thread RenderThread(Rendering);
-
-		PhysicsThread.join();
-		RenderThread.join();
+		FractalEngine::Physics();
+		FractalEngine::Rendering();
 	}
-	//Creates a scene if not already done named "Default"
-	static void Initialize(const char* title = "Default", const int width = 1280, const int height = 720, const SDL_WindowFlags theme = SDL_WINDOW_BORDERLESS)
+	//Creates a Window and scene if not already created one, Scene name "Default", Window name "Window"
+	static void Initialize(const char* title = "Window", const int width = 1280, const int height = 720, const SDL_WindowFlags theme = SDL_WINDOW_RESIZABLE)
 	{
 		FractalEngineCore::CreateWindow(title, width, height, theme);
 	}
 	static void stop()
 	{
 		running = false;
+		AssetManager::Clear();
+		SDL_Renderer* renderer = Rendering::getRenderer();
+		if (renderer)
+			SDL_DestroyRenderer(renderer);
+		if (FractalEngineCore::window)
+			SDL_DestroyWindow(FractalEngineCore::window);
 	}
 };

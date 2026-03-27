@@ -9,21 +9,24 @@ class Object;
 
 class Scene
 {
+private:
+	std::string name;
 public:
 	std::vector<Object*> objects = {};
-	std::string name;
 	void Render();
 	void Update();
 	Scene(const std::string sceneName)
 	{
 		name = sceneName;
 	};
+	inline std::string getName() const
+	{
+		return name;
+	}
 	~Scene()
 	{
-		for (auto& obj : objects)
-		{
+		for (auto obj : objects)
 			delete obj;
-		}
 	}
 };
 
@@ -36,16 +39,14 @@ public:
 	static void createScene(const std::string& name)
 	{
 		SceneManager::scenes.emplace(name, std::make_unique<Scene>(name));
-		if (!currentScene)
+		if (!SceneManager::currentScene)
 			loadScene(name);
 	}
 	static void loadScene(const std::string& name)
 	{
-		for (auto& s : scenes)
-		{
-			if (s.first == name)
-				currentScene = s.second.get();
-		}
+		auto it = SceneManager::scenes.find(name);
+		if (it != SceneManager::scenes.end())
+			SceneManager::currentScene = it->second.get();
 	}
 	static Scene* getScene(const std::string& name)
 	{
@@ -56,16 +57,17 @@ public:
 	{
 		createScene("Default");
 	}
-	inline static Scene* getCurrentScene() { return currentScene; };
-	static void runCurrentScene()
+	static void loadDefault()
 	{
-		if (!currentScene)
+		bool defualt_exist = (SceneManager::scenes.find("Default") != SceneManager::scenes.end()) ? true : false;
+	
+		if (defualt_exist)
+			loadScene("Default");
+		else
 		{
 			createDefault();
-			return;
+			loadScene("Default");
 		}
-
-		currentScene->Update();
-		currentScene->Render();
 	}
+	inline static Scene* getCurrentScene() { return SceneManager::currentScene; };
 };

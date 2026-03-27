@@ -39,19 +39,22 @@ int main()
 	obj2.getComponent<Components::Physics2D>()->mass = 20;
 
 	bool bing = true;
-
+	SceneManager::loadScene("Default");
 	while (FractalEngine::running)
 	{
-		Scene* current = SceneManager::getCurrentScene();
-		std::cout << "\033[2J\033[1;1H";
-		std::cout << "Current scene: " << current->name << "\n";
 		FractalEngine::start();
 		if (Input::getButtonDown(SDL_SCANCODE_0))
-			SceneManager::loadScene("Default");
-		if (Input::getButtonDown(SDL_SCANCODE_3))
-			SceneManager::loadScene("Test2");
-		if (Input::getButtonDown(SDL_SCANCODE_4))
+		{
+			obj4.getComponent<Components::Physics2D>()->addForce({ 0.0, -50.0 });
+		}
+		if (Input::getButton(SDL_SCANCODE_SPACE))
+			obj4.transform.rotation++;
+		if (Input::getButtonDown(SDL_SCANCODE_1))
 			FractalEngine::stop();
+		if (Input::getButtonDown(SDL_SCANCODE_2))
+			SceneManager::loadScene("Test2");
+		if (Input::getButtonDown(SDL_SCANCODE_3))
+			SceneManager::loadScene("Default");
 	}
 
 	return 0;
