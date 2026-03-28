@@ -1,39 +1,48 @@
 #include "FractalScene.h"
 #include "../Rendering/RenderingSystem.h"
 #include "../Physics/PhysicsFunctions.h"
+#include "../Core/FractalEngineCore.h"
 #include <iostream>
 
 Scene* SceneManager::currentScene = nullptr;
 std::unordered_map<std::string, std::unique_ptr<Scene>> SceneManager::scenes = {};
+
+inline SDL_Color changeColor(const GameObject* b)
+{
+	SDL_Color color;
+	uint32_t id = b->ID;
+	color.r = (id * 53) % 256;
+	color.g = (id * 97) % 256;
+	color.b = (id * 193) % 256;
+	color.a = 255;
+	return color;
+}
 
 void Scene::Render()
 {
 	Rendering::clearScreen();
 	for (auto& obj : objects)
 	{
-		GameObject* b = dynamic_cast<GameObject*>(obj);
-		if (!b) continue;
+		if (obj->getType() != Type::GAMEOBJECT) continue;
 
-		Components::Sprite* sprtComponent = b->getComponent<Components::Sprite>();
+		GameObject* gameObj = static_cast<GameObject*>(obj);
+		if (!gameObj) continue;
 
-		const float width = (sprtComponent) ? sprtComponent->width : 150;
-		const float height = (sprtComponent) ? sprtComponent->height : 150;
+		SDL_FRect& rect = gameObj->getRenderTarget();
+		const float width = rect.w;
+		const float height = rect.h;
 
-		SDL_Color color;
-		if (sprtComponent)
+		Components::Sprite* sprtComponent = gameObj->getComponent<Components::Sprite>();
+		SDL_Color color = (sprtComponent) ? sprtComponent->color : changeColor(gameObj);
+
+		Components::Animator* animator = gameObj->getComponent<Components::Animator>();
+		if (animator)
 		{
-			color = sprtComponent->color;
+			animator->Update(FractalEngineCore::deltaTime);
+			Rendering::renderAnimation(*animator);
+			continue;
 		}
-		else
-		{
-			uint32_t id = b->ID;
-			color.r = (id * 53) % 256;
-			color.g = (id * 97) % 256;
-			color.b = (id * 193) % 256;
-			color.a = 255;
-		}
-
-		Rendering::drawQuad(b->transform.position.x, b->transform.position.y, width, height, b->transform.rotation, color);
+		Rendering::drawQuad(gameObj->transform.position.x, gameObj->transform.position.y, width, height, gameObj->transform.rotation, color);
 	}
 	Rendering::pushToScreen();
 }

@@ -55,6 +55,15 @@ void Rendering::drawQuad(float x, float y, float w, float h, float rotation, con
 	SDL_FPoint center = { w / 2.0 + x,  h / 2.0 + y };
 
 	const int startIndex = Rendering::Vertices.size();
+	int indices[6] =
+	{
+		0 + startIndex,1 + startIndex,2 + startIndex, //First triangle
+		2 + startIndex,1 + startIndex,3 + startIndex //Second triangle
+	};
+	for (size_t i = 0; i < 6; i++)
+	{
+		Rendering::Indices.push_back(indices[i]);
+	}
 
 	for (size_t i = 0; i < 4; i++)
 	{
@@ -69,18 +78,6 @@ void Rendering::drawQuad(float x, float y, float w, float h, float rotation, con
 		vertices[i].color = quadColor;
 		Rendering::Vertices.push_back(vertices[i]);
 	}
-
-	int indices[6] =
-	{
-		0 + startIndex,1 + startIndex,2 + startIndex, //First triangle
-		2 + startIndex,1 + startIndex,3 + startIndex //Second triangle
-	};
-
-	for (size_t i = 0; i < 6; i++)
-	{
-		Rendering::Indices.push_back(indices[i]);
-	}
-
 }
 
 void Rendering::pushToScreen()
@@ -99,12 +96,37 @@ void Rendering::pushToScreen()
 	if(!Lines.empty())
 		for (size_t i = 0; i < Lines.size(); i++)
 		{
-			SDL_SetRenderDrawColor(Rendering::getRenderer(), Lines[i].color.r, Lines[i].color.g, Lines[i].color.b, Lines[i].color.a);
+			SDL_SetRenderDrawColor(Rendering::renderer, Lines[i].color.r, Lines[i].color.g, Lines[i].color.b, Lines[i].color.a);
 			SDL_RenderLine(Rendering::renderer, Lines[i].x1, Lines[i].y1, Lines[i].x2, Lines[i].y2);
 		}
 
 	SDL_SetRenderDrawColor(Rendering::renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::renderer);
+
+	//only clears the size not capacity so it doesnt shrink the actual memory
 	Rendering::Vertices.clear();
 	Rendering::Indices.clear();
+}
+
+void Rendering::renderAnimation(const Components::Animator& animator)
+{
+	if (!animator.currentAnimation) return;
+
+	auto* currentAnimation = animator.currentAnimation;
+
+	SDL_FRect srcRect = currentAnimation->frame;
+	currentAnimation->xOffset = currentAnimation->frame.w * currentAnimation->frameIndex;
+
+	if (currentAnimation->xOffset >= currentAnimation->spriteSheet->w)
+	{
+		currentAnimation->yOffset += currentAnimation->spriteSheet->h / currentAnimation->numberOfFrames;
+	}
+
+	srcRect.x = currentAnimation->xOffset;
+	srcRect.y = currentAnimation->yOffset;
+
+	SDL_RenderTexture(Rendering::getRenderer(), 
+		currentAnimation->spriteSheet,
+		&srcRect, 
+		currentAnimation->renderTarget);
 }

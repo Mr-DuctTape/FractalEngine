@@ -22,7 +22,7 @@ private:
 	}
 public:
 	static bool running;
-	static void start()
+	static void run()
 	{
 		FractalEngineCore::DeltaTime();
 		Input::Process();
@@ -30,8 +30,9 @@ public:
 		FractalEngine::Rendering();
 	}
 	//Creates a Window and scene if not already created one, Scene name "Default", Window name "Window"
-	static void Initialize(const char* title = "Window", const int width = 1280, const int height = 720, const SDL_WindowFlags theme = SDL_WINDOW_RESIZABLE)
+	static void Initialize(const char* title = "Window", const int width = 1920, const int height = 1080, const SDL_WindowFlags theme = SDL_WINDOW_RESIZABLE)
 	{
+		running = true;
 		FractalEngineCore::CreateWindow(title, width, height, theme);
 	}
 	static void stop()

@@ -68,10 +68,10 @@ namespace Functions
 
 		for (auto& p : objects)
 		{
-			auto other = dynamic_cast<GameObject*>(p);
+			if (p->getType() != Type::GAMEOBJECT) continue;
 
-			if (!other) 
-				continue;
+			GameObject* other = static_cast<GameObject*>(p);
+
 			if (other == object)
 				continue;
 
@@ -102,8 +102,8 @@ void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all Ga
 {
 	for (size_t i = 0; i < objects.size(); i++)
 	{
-		GameObject* obj = dynamic_cast<GameObject*>(objects[i]);
-		if(obj)
-			Functions::UpdatePhysics(obj);
+		if (objects[i]->getType() != Type::GAMEOBJECT) continue;
+		GameObject* obj = static_cast<GameObject*>(objects[i]);
+		Functions::UpdatePhysics(obj);
 	}
 }

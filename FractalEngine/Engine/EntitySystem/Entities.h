@@ -3,19 +3,27 @@
 #include <memory>
 #include <SDL3/SDL.h>
 #include "../Vectors/Vector2D.h"
-
 class SceneManager;
 #include "../SceneManagement/FractalScene.h"
 
-class GameObject;
+enum Type
+{
+	OBJECT,
+	GAMEOBJECT,
+	OTHER
+};
 
 class Object
 {
 public:
 	virtual ~Object() {};
+	virtual Type getType() { return Type::OBJECT; };
 };
 
 //
+class Rendering;
+class GameObject;
+
 namespace Components
 {
 	struct Component
@@ -34,8 +42,6 @@ namespace Components
 	{
 		SDL_Texture* texture;
 		SDL_Color color;
-		float width;
-		float height;
 	};
 
 	struct Physics2D : public Component
@@ -52,10 +58,54 @@ namespace Components
 		}
 	};
 
-	struct Animator : public Component
+	class Animator : public Component
 	{
-		void Play(const std::string& name);
-		void Stop(const std::string& name);
+	public:
+		struct Animation
+		{
+			unsigned int numberOfFrames;
+			unsigned int frameIndex;
+
+			float xOffset = 0.0;
+			float yOffset = 0.0;
+
+			float timer;
+			float frameTime;
+
+			SDL_FRect frame;
+			SDL_FRect* renderTarget;
+			SDL_Texture* spriteSheet;
+		};
+	private:
+		static std::unordered_map<std::string, Animation> animations;
+		Animation* currentAnimation = nullptr;
+		friend class Rendering;
+		float animationSpeed = 0.0f;
+	public:
+		void createAnimation
+		(
+			const std::string& name,
+			unsigned int frames,
+			float speed,
+			SDL_Texture* spriteSheet
+		);
+		void Update(const float deltaTime);
+		bool isPlaying = false;
+		void setAnimation(const std::string& name);
+		std::vector<std::string> getAnimationNames()
+		{
+			std::vector<std::string> temp;
+			for (auto& pair : animations)
+				temp.push_back(pair.first);
+			return temp;
+		}
+		Animation& getCurrentAnimation() const
+		{
+			return *currentAnimation;
+		}
+		void Play();
+		void setSpeed(const float& speed);
+		void Stop();
 	};
 
 	struct CollisionBox
@@ -65,22 +115,14 @@ namespace Components
 		float minX;
 		float maxX;
 		CollisionBox()
-		{
-			minY = 0;
-			maxY = 0;
-			minX = 0;
-			maxX = 0;
-		}
+			: minY(0), maxY(0), minX(0), maxX(0)
+		{ }
 		CollisionBox(float mnY, float mxY, float mnX, float mxX)
-		{
-			minY = mnY;
-			maxY = mxY;
-			minX = mnX;
-			maxX = mxX;
-		}
+			: minY(mnY), maxY(mxY), minX(mnX), maxX(mxX)
+		{ }
 	};
 }
-//
+
 class TileMap
 {
 
@@ -96,33 +138,31 @@ private:
 		objComponents.push_back(component);
 	}
 	static unsigned int IDNumber;
+	SDL_FRect rect;
 public:
 	Components::Transform transform = {};
 	unsigned int ID;
 
+	inline SDL_FRect& getRenderTarget()
+	{
+		if(rect.x != transform.position.x)
+			rect.x = transform.position.x;
+		if(rect.y != transform.position.y)
+			rect.y = transform.position.y;
+		return rect;
+	}
+	Type getType() override
+	{
+		return Type::GAMEOBJECT;
+	};
 	inline Components::CollisionBox getCollisionBox()
 	{
-		Components::Sprite* sprt = getComponent<Components::Sprite>();
-
-		if (sprt != nullptr)
-		{
-			return Components::CollisionBox{
-				transform.position.y,                 // minY
-				transform.position.y + sprt->height,  // maxY
-				transform.position.x,                 // minX
-				transform.position.x + sprt->width    // maxX
-			};
-		}
-		else
-		{
-			return Components::CollisionBox{
-				transform.position.y,
-				transform.position.y + 150,
-				transform.position.x,
-				transform.position.x + 150
-			};
-		}
-
+		return Components::CollisionBox{
+			transform.position.y,                 // minY
+			transform.position.y + getRenderTarget().h,  // maxY
+			transform.position.x,                 // minX
+			transform.position.x + getRenderTarget().w    // maxX
+		};
 	}
 	int getComponentAmount() const
 	{
@@ -131,7 +171,7 @@ public:
 	template <typename T>
 	void addComponent(const T& value)
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>, "T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -145,7 +185,7 @@ public:
 	template <typename T>
 	void addComponent()
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>, "T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -159,7 +199,7 @@ public:
 	template <typename T>
 	bool hasComponent() const
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>, "T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -172,7 +212,7 @@ public:
 	template <typename T>
 	T* getComponent()
 	{
-		static_assert(std::is_base_of_v<Components::Component, T>,"T must be a component!");
+		static_assert(std::is_base_of_v<Components::Component, T>, "T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
 		{
 			if (T* component = dynamic_cast<T*>(objComponents[i]))
@@ -184,6 +224,17 @@ public:
 	}
 	GameObject()
 	{
+		rect.w = 150;
+		rect.h = 150;
+
+		ID = ++IDNumber;
+		objComponents.push_back(&transform);
+	}
+	GameObject(unsigned int width, unsigned int height)
+	{
+		rect.w = width;
+		rect.h = height;
+
 		ID = ++IDNumber;
 		objComponents.push_back(&transform);
 	}
@@ -218,13 +269,19 @@ public:
 
 extern Camera camera;
 
-/// 
-/// 
-///
 template <typename T> //Creates object on the current active scene
-T& CreateObject() 
+T& CreateObject()
 {
+	static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
 	auto location = new T();
+	SceneManager::getCurrentScene()->objects.push_back(location);
+	return *location;
+}
+template <typename T>
+T& CreateObject(const T& value)
+{
+	static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
+	auto location = new T(value);
 	SceneManager::getCurrentScene()->objects.push_back(location);
 	return *location;
 }

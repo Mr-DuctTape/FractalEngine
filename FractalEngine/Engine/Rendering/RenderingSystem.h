@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <vector>
+#include "../EntitySystem/Entities.h"
 
 class Scene;
 
@@ -20,7 +21,6 @@ private:
 	static std::vector<Line> Lines;
 
 	static SDL_Renderer* renderer;
-
 	static float cosTable[360];
 	static float sinTable[360];
 	static void calculateTables()
@@ -52,6 +52,7 @@ public:
 	}
 	static void clearScreen(SDL_Color color = { 0, 0, 0, 0 });
 	static void drawQuad(float x, float y, float w, float h, float rotation, const SDL_Color& color);
-	static void drawLine(float x1, float x2, float y1, float y2, SDL_Color color);
+	static void drawLine(float x1, float y1, float x2, float y2, SDL_Color color);
+	static void renderAnimation(const Components::Animator& animator);
 	static void pushToScreen();
 };
