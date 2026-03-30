@@ -26,39 +26,39 @@ void Input::Process()
 	}
 }
 
-const Input::MousePosition Input::getMousePosition() //Gets mouse position relative to the window
+const Input::MousePosition Input::GetMousePosition() //Gets mouse position relative to the window
 {
 	float x, y;
 	SDL_GetMouseState(&x, &y);
 	return Input::MousePosition{x , y};
 }
 
-const bool Input::getMouseButtonDown(Mouse button)
+const bool Input::GetMouseButtonDown(Mouse button)
 {
 	return currentMouse[button] && !previousMouse[button];
 }
 
-const bool Input::getMouseButtonUp(Mouse button)
+const bool Input::GetMouseButtonUp(Mouse button)
 {
 	return !currentMouse[button] && previousMouse[button];
 }
 
-const bool Input::getMouseButton(Mouse button)
+const bool Input::GetMouseButton(Mouse button)
 {
 	return currentMouse[button] && previousMouse[button];
 }
 
-const bool Input::getButtonDown(SDL_Scancode key)
+const bool Input::GetButtonDown(SDL_Scancode key)
 {
 	return currentKeys[key] && !previousKeys[key];
 }
 
-const bool Input::getButtonUp(SDL_Scancode key)
+const bool Input::GetButtonUp(SDL_Scancode key)
 {
 	return !currentKeys[key] && previousKeys[key];
 }
 
-const bool Input::getButton(SDL_Scancode key)
+const bool Input::GetButton(SDL_Scancode key)
 {
 	return currentKeys[key] && previousKeys[key];
 }

@@ -24,12 +24,12 @@ public:
 	{
 		float x, y;
 	};
-	static const bool getButton(SDL_Scancode key);
-	static const bool getButtonDown(SDL_Scancode key);
-	static const bool getButtonUp(SDL_Scancode key);
-	static const bool getMouseButtonDown(Mouse button);
-	static const bool getMouseButton(Mouse button);
-	static const bool getMouseButtonUp(Mouse button);
-	static const MousePosition getMousePosition();
+	static const bool GetButton(SDL_Scancode key);
+	static const bool GetButtonDown(SDL_Scancode key);
+	static const bool GetButtonUp(SDL_Scancode key);
+	static const bool GetMouseButtonDown(Mouse button);
+	static const bool GetMouseButton(Mouse button);
+	static const bool GetMouseButtonUp(Mouse button);
+	static const MousePosition GetMousePosition();
 	static void Process();
 };

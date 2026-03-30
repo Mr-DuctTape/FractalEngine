@@ -19,7 +19,7 @@ public:
 	{
 		name = sceneName;
 	};
-	inline std::string getName() const
+	inline std::string GetName() const
 	{
 		return name;
 	}
@@ -36,13 +36,13 @@ private:
 	static Scene* currentScene;
 	static std::unordered_map<std::string, std::unique_ptr<Scene>> scenes;
 public:
-	static void createScene(const std::string& name)
+	static void CreateScene(const std::string& name)
 	{
 		SceneManager::scenes.emplace(name, std::make_unique<Scene>(name));
 		if (!SceneManager::currentScene)
-			loadScene(name);
+			LoadScene(name);
 	}
-	static void loadScene(const std::string& name)
+	static void LoadScene(const std::string& name)
 	{
 		auto it = SceneManager::scenes.find(name);
 		if (it != SceneManager::scenes.end())
@@ -53,21 +53,21 @@ public:
 		auto scene = SceneManager::scenes.find(name);
 		return scene->second.get();
 	}
-	static void createDefault()
+	static void CreateDefault()
 	{
-		createScene("Default");
+		CreateScene("Default");
 	}
-	static void loadDefault()
+	static void LoadDefault()
 	{
 		bool defualt_exist = (SceneManager::scenes.find("Default") != SceneManager::scenes.end()) ? true : false;
 	
 		if (defualt_exist)
-			loadScene("Default");
+			LoadScene("Default");
 		else
 		{
-			createDefault();
-			loadScene("Default");
+			CreateDefault();
+			LoadScene("Default");
 		}
 	}
-	inline static Scene* getCurrentScene() { return SceneManager::currentScene; };
+	inline static Scene* GetCurrentScene() { return SceneManager::currentScene; };
 };

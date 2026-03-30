@@ -4,59 +4,94 @@
 
 using namespace Components;
 
-std::unordered_map < std::string, Components::Animator::Animation> Components::Animator::animations;
+std::unordered_map<std::string, Components::Animator::Animation> Components::Animator::_animations;
 
-void Animator::createAnimation(const std::string& name,
+void Animator::CreateAnimation(const std::string& name,
 	unsigned int frames,
 	float speed,
 	SDL_Texture* spriteSheet)
 {
+	Init();
+
 	Animation animation;
 	animation.numberOfFrames = frames;
 	animation.spriteSheet = spriteSheet;
 
-	animation.frame.x = 0;
-	animation.frame.y = 0;
-	animation.frame.h = spriteSheet->h;
-	animation.frame.w = spriteSheet->w / frames;
+	animation.spriteHeight = spriteSheet->h;
+	animation.spriteWidth = spriteSheet->w / frames;
+	animation.spriteX = 0;
+	animation.spriteY = 0;
+
+	float texW = 0.0f, texH = 0.0f;
+	if (SDL_GetTextureSize(spriteSheet, &texW, &texH))
+	{
+		sprite->u1 = animation.spriteX / texW;
+		sprite->v1 = animation.spriteY / texH;
+		sprite->u2 = (animation.spriteX + animation.spriteWidth) / texW;
+		sprite->v2 = (animation.spriteY + animation.spriteHeight) / texH;
+	}
 
 	animation.frameIndex = 0;
 	animation.timer = 0.0f;
 	animation.frameTime = speed;
+	Animator::_animations.emplace(name, animation);
+}
 
-	animation.renderTarget = &parent->getRenderTarget();
-	Animator::animations.emplace(name, animation);
+inline void Animator::Init()
+{
+	if (_hasInit) return;
+
+	if (!sprite)
+		sprite = parent->GetComponent<Sprite>();
+
+	if (!sprite)
+	{
+		sprite = parent->AddComponent<Sprite>();
+	}
+	_hasInit = true;
 }
 
 void Animator::Update(const float deltaTime)
 {
-	if (!currentAnimation) return;
-	
-	auto* anim = currentAnimation;
-	anim->timer += deltaTime;
+	if (!_currentAnimation) return;
 
-	if(anim->timer >= anim->frameTime)
+	auto* animation = _currentAnimation;
+
+	if (animation->spriteSheet->w == 0 || animation->spriteSheet->h == 0) return;
+	animation->timer += deltaTime;
+
+	if (animation->timer >= animation->frameTime)
 	{
-		anim->timer -= anim->frameTime;
+		animation->timer -= animation->frameTime;
 
-		anim->frameIndex++;
+		animation->frameIndex++;
 
-		if (anim->frameIndex >= anim->numberOfFrames)
-			anim->frameIndex = 0;
+		if (animation->frameIndex >= animation->numberOfFrames)
+			animation->frameIndex = 0;
 	}
+
+	animation->spriteX = animation->spriteWidth * animation->frameIndex;
+
+	sprite->u1 = animation->spriteX / static_cast<float>(animation->spriteSheet->w);
+	sprite->v1 = animation->spriteY / static_cast<float>(animation->spriteSheet->h);
+	sprite->u2 = (animation->spriteX + animation->spriteWidth) / static_cast<float>(animation->spriteSheet->w);
+	sprite->v2 = (animation->spriteY + animation->spriteHeight) / static_cast<float>(animation->spriteSheet->h);
 }
 
-void Animator::setAnimation(const std::string& name)
+void Animator::SetAnimation(const std::string& name)
 {
-	auto it = Animator::animations.find(name);
-	if (it == Animator::animations.end()) return;
+	auto it = Animator::_animations.find(name);
+	if (it == Animator::_animations.end()) return;
+	Init();
 
-	currentAnimation = &it->second;
+	_currentAnimation = &it->second;
+	_currentAnimation->savedSprite = sprite->texture;
+	sprite->texture = _currentAnimation->spriteSheet;
 }
 
-void Animator::setSpeed(const float& speed)
+void Animator::SetSpeed(const float& speed)
 {
-	animationSpeed = speed;
+	_animationSpeed = speed;
 }
 
 void Animator::Play()
@@ -66,6 +101,8 @@ void Animator::Play()
 
 void Animator::Stop()
 {
+	sprite->texture = _currentAnimation->savedSprite;
+	sprite->ResetUV();
 	isPlaying = false;
 }
 

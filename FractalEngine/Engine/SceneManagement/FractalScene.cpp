@@ -7,7 +7,7 @@
 Scene* SceneManager::currentScene = nullptr;
 std::unordered_map<std::string, std::unique_ptr<Scene>> SceneManager::scenes = {};
 
-inline SDL_Color changeColor(const GameObject* b)
+inline SDL_Color ChangeColor(const GameObject* b)
 {
 	SDL_Color color;
 	uint32_t id = b->ID;
@@ -20,31 +20,34 @@ inline SDL_Color changeColor(const GameObject* b)
 
 void Scene::Render()
 {
-	Rendering::clearScreen();
+	Rendering::ClearScreen();
 	for (auto& obj : objects)
 	{
-		if (obj->getType() != Type::GAMEOBJECT) continue;
+		if (obj->GetType() != Type::GAMEOBJECT) continue;
 
 		GameObject* gameObj = static_cast<GameObject*>(obj);
 		if (!gameObj) continue;
 
-		SDL_FRect& rect = gameObj->getRenderTarget();
+		SDL_FRect& rect = gameObj->GetRenderTarget();
 		const float width = rect.w;
 		const float height = rect.h;
 
-		Components::Sprite* sprtComponent = gameObj->getComponent<Components::Sprite>();
-		SDL_Color color = (sprtComponent) ? sprtComponent->color : changeColor(gameObj);
+		Components::Sprite* sprtComponent = gameObj->GetComponent<Components::Sprite>();
+		SDL_Color color = (sprtComponent) ? sprtComponent->color : ChangeColor(gameObj);
 
-		Components::Animator* animator = gameObj->getComponent<Components::Animator>();
+		Components::Animator* animator = gameObj->GetComponent<Components::Animator>();
+
 		if (animator)
-		{
 			animator->Update(FractalEngineCore::deltaTime);
-			Rendering::renderAnimation(*animator);
-			continue;
-		}
-		Rendering::drawQuad(gameObj->transform.position.x, gameObj->transform.position.y, width, height, gameObj->transform.rotation, color);
+
+		Rendering::DrawQuad(
+			gameObj->transform.position.x,
+			gameObj->transform.position.y,
+			width, height,
+			gameObj->transform.rotation,
+			sprtComponent, color);
 	}
-	Rendering::pushToScreen();
+	Rendering::PushToScreen();
 }
 
 void Scene::Update()

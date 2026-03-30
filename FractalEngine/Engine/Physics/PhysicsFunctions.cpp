@@ -18,12 +18,12 @@ namespace Functions
 
 	void Collide(GameObject* obj, GameObject* other)
 	{
-		Physics2D* physicsComponent = obj->getComponent<Physics2D>();
+		Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
 
 		if (!physicsComponent) return;
 
-		const CollisionBox objBox = obj->getCollisionBox();
-		const CollisionBox otherBox = other->getCollisionBox();
+		const CollisionBox objBox = obj->GetCollisionBox();
+		const CollisionBox otherBox = other->GetCollisionBox();
 
 		const float penetrationX = std::min(objBox.maxX, otherBox.maxX) - std::max(objBox.minX, otherBox.minX);
 		const float penetrationY = std::min(objBox.maxY, otherBox.maxY) - std::max(objBox.minY, otherBox.minY);
@@ -47,7 +47,7 @@ namespace Functions
 		if (normal.length() == 0) normal = Vector2(0, 1);
 		else normal = normal.normalized();
 
-		Physics2D* otherPhysics = other->getComponent<Physics2D>();;
+		Physics2D* otherPhysics = other->GetComponent<Physics2D>();;
 		if (otherPhysics)
 		{
 			otherPhysics->velocity = -Vector2::reflect(physicsComponent->velocity, normal) * Physics::Values::friction;
@@ -57,25 +57,25 @@ namespace Functions
 
 	void UpdatePhysics(GameObject* object)
 	{
-		Physics2D* physicsComponent = object->getComponent<Physics2D>();
+		Physics2D* physicsComponent = object->GetComponent<Physics2D>();
 		if (!physicsComponent)
 			return;
 
 		physicsComponent->acceleration = physicsComponent->force / physicsComponent->mass;
 
 		bool anyCollision = false;
-		auto &objects = SceneManager::getCurrentScene()->objects;
+		auto &objects = SceneManager::GetCurrentScene()->objects;
 
 		for (auto& p : objects)
 		{
-			if (p->getType() != Type::GAMEOBJECT) continue;
+			if (p->GetType() != Type::GAMEOBJECT) continue;
 
 			GameObject* other = static_cast<GameObject*>(p);
 
 			if (other == object)
 				continue;
 
-			if (CheckCollision(object->getCollisionBox(), other->getCollisionBox()))
+			if (CheckCollision(object->GetCollisionBox(), other->GetCollisionBox()))
 			{
 				Collide(object, other);
 				anyCollision = true;
@@ -102,7 +102,7 @@ void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all Ga
 {
 	for (size_t i = 0; i < objects.size(); i++)
 	{
-		if (objects[i]->getType() != Type::GAMEOBJECT) continue;
+		if (objects[i]->GetType() != Type::GAMEOBJECT) continue;
 		GameObject* obj = static_cast<GameObject*>(objects[i]);
 		Functions::UpdatePhysics(obj);
 	}

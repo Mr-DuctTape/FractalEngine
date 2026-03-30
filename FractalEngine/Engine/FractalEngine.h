@@ -14,15 +14,15 @@ class FractalEngine
 private:
 	static void Physics()
 	{
-		SceneManager::getCurrentScene()->Update();
+		SceneManager::GetCurrentScene()->Update();
 	}
 	static void Rendering()
 	{
-		SceneManager::getCurrentScene()->Render();
+		SceneManager::GetCurrentScene()->Render();
 	}
 public:
 	static bool running;
-	static void run()
+	static void Run()
 	{
 		FractalEngineCore::DeltaTime();
 		Input::Process();
@@ -35,13 +35,13 @@ public:
 		running = true;
 		FractalEngineCore::CreateWindow(title, width, height, theme);
 	}
-	static void stop()
+	static void Stop()
 	{
 		running = false;
 		AssetManager::Clear();
-		SDL_Renderer* renderer = Rendering::getRenderer();
-		if (renderer)
-			SDL_DestroyRenderer(renderer);
+		SDL_Renderer* _Renderer = Rendering::GetRenderer();
+		if (_Renderer)
+			SDL_DestroyRenderer(_Renderer);
 		if (FractalEngineCore::window)
 			SDL_DestroyWindow(FractalEngineCore::window);
 	}

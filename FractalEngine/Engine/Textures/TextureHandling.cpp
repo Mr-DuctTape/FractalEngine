@@ -15,7 +15,7 @@ SDL_Texture* AssetManager::CreateTextureBMP(const char* path)
 		return nullptr;
 	}
 
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(Rendering::getRenderer(), imageSpecs);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(Rendering::GetRenderer(), imageSpecs);
 	return texture;
 }
 

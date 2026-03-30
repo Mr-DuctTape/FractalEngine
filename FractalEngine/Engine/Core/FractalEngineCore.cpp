@@ -11,8 +11,8 @@ Uint64 previous;
 
 void FractalEngineCore::Initialize()
 {
-	if (!SceneManager::getCurrentScene())
-		SceneManager::createDefault();
+	if (!SceneManager::GetCurrentScene())
+		SceneManager::CreateDefault();
 }
 
 void FractalEngineCore::CreateWindow(const char* title, const int w, const int h, SDL_WindowFlags theme)
