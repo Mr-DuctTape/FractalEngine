@@ -34,6 +34,7 @@ void Animator::CreateAnimation(const std::string& name,
 	animation.frameIndex = 0;
 	animation.timer = 0.0f;
 	animation.frameTime = speed;
+	_animationSpeed = speed;
 	Animator::_animations.emplace(name, animation);
 }
 
@@ -53,16 +54,14 @@ inline void Animator::Init()
 
 void Animator::Update(const float deltaTime)
 {
-	if (!_currentAnimation) return;
-
-	auto* animation = _currentAnimation;
+	auto* animation = &_currentAnimation;
 
 	if (animation->spriteSheet->w == 0 || animation->spriteSheet->h == 0) return;
 	animation->timer += deltaTime;
 
-	if (animation->timer >= animation->frameTime)
+	if (animation->timer >= _animationSpeed)
 	{
-		animation->timer -= animation->frameTime;
+		animation->timer -= _animationSpeed;
 
 		animation->frameIndex++;
 
@@ -84,14 +83,15 @@ void Animator::SetAnimation(const std::string& name)
 	if (it == Animator::_animations.end()) return;
 	Init();
 
-	_currentAnimation = &it->second;
-	_currentAnimation->savedSprite = sprite->texture;
-	sprite->texture = _currentAnimation->spriteSheet;
+	_currentAnimation = it->second;
+	_currentAnimation.savedSprite = sprite->texture;
+	sprite->texture = _currentAnimation.spriteSheet;
 }
 
-void Animator::SetSpeed(const float& speed)
+void Animator::SetSpeed(float speed)
 {
-	_animationSpeed = speed;
+	this->_animationSpeed = speed;
+	std::cout << _animationSpeed << "\n";
 }
 
 void Animator::Play()
@@ -101,7 +101,7 @@ void Animator::Play()
 
 void Animator::Stop()
 {
-	sprite->texture = _currentAnimation->savedSprite;
+	sprite->texture = _currentAnimation.savedSprite;
 	sprite->ResetUV();
 	isPlaying = false;
 }

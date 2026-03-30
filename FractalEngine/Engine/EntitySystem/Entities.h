@@ -95,7 +95,7 @@ namespace Components
 		};
 	private:
 		static std::unordered_map<std::string, Animation> _animations;
-		Animation* _currentAnimation = nullptr;
+		Animation _currentAnimation;
 		Sprite* sprite = nullptr;
 		float _animationSpeed = 0.0f;
 		friend class Rendering;
@@ -118,13 +118,13 @@ namespace Components
 				temp.push_back(pair.first);
 			return temp;
 		}
-		Animation* GetCurrentAnimation() const
+		Animation* GetCurrentAnimation() 
 		{
-			return _currentAnimation;
+			return &_currentAnimation;
 		}
 		void Update(const float deltaTime);
 		void SetAnimation(const std::string& name);
-		void SetSpeed(const float& speed);
+		void SetSpeed(float speed);
 		void Play();
 		void Stop();
 	};

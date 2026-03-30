@@ -12,18 +12,16 @@ private:
 	struct Batch
 	{
 		static int batchNumber;
-		int batchNum = 0;
 		SDL_Texture* texture = nullptr;
 		std::vector<int> _Indices = {};
 		std::vector<SDL_Vertex> _Vertices = {};
 		Batch()
 		{
 			std::cout << "Created batch: " << ++batchNumber << "\n";
-			batchNum = batchNumber;
 		}
 	};
 	static std::vector<std::unique_ptr<Batch>> _Batches;
-	static Batch* GetBatch(SDL_Texture* texture)
+	static Batch* _GetBatch(SDL_Texture* texture)
 	{ 
 		if (!texture) return _Batches[0].get();
 		for (size_t i = 0; i < _Batches.size(); i++)
@@ -34,7 +32,7 @@ private:
 					return obj;
 		}
 	}
-	static Batch* FindBatch(SDL_Texture* texture)
+	static Batch* _FindBatch(SDL_Texture* texture)
 	{
 		if (!texture) return _Batches[0].get();
 		for (size_t i = 0; i < _Batches.size(); i++)
@@ -74,7 +72,6 @@ private:
 	}
 
 	static Rendering::Batch* CreateBatch(SDL_Texture* texture);
-
 public:
 	static void Init(SDL_Window* window)
 	{
@@ -93,5 +90,4 @@ public:
 	static void DrawQuad(float x, float y, float w, float h, float rotation, Components::Sprite* sprite, const SDL_Color& color);
 	static void DrawLine(float x1, float v1, float x2, float v2, SDL_Color color);
 	static void PushToScreen();
-	static void RenderAnimation(const Components::Animator& animator);
 };

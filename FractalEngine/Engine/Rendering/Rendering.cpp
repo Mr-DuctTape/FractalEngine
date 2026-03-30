@@ -180,7 +180,3 @@ void Rendering::PushToScreen()
 	SDL_SetRenderDrawColor(Rendering::_Renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::_Renderer);
 }
-
-void Rendering::RenderAnimation(const Components::Animator& animator)
-{
-}

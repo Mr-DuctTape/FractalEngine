@@ -37,10 +37,13 @@ int main()
 	obj2.AddComponent<Components::Animator>();
 
 	AssetManager::CreateTexture("Bob", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\bob.bmp");
-	animator->CreateAnimation("BobAnimation", 5, 0.15f, AssetManager::GetTexture("Bob"));
+	animator->CreateAnimation("BobAnimation", 5, 0.1f, AssetManager::GetTexture("Bob"));
 	animator->SetAnimation("BobAnimation");
+
 	obj2.GetComponent<Components::Animator>()->SetAnimation("BobAnimation");
+	obj2.GetComponent<Components::Animator>()->SetSpeed(0.2f);
 	obj2.GetComponent<Components::Animator>()->Play();
+
 	animator->Play();
 
 	SceneManager::LoadScene("Default");
