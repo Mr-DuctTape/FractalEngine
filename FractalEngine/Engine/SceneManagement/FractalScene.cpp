@@ -28,7 +28,7 @@ void Scene::Render()
 		GameObject* gameObj = static_cast<GameObject*>(obj);
 		if (!gameObj) continue;
 
-		SDL_FRect& rect = gameObj->GetRenderTarget();
+		SDL_FRect& rect = gameObj->GetRect();
 		const float width = rect.w;
 		const float height = rect.h;
 

@@ -8,14 +8,9 @@ float Rendering::cosTable[360] = {};
 float Rendering::sinTable[360] = {};
 
 int Rendering::Batch::batchNumber = 0;
-
 SDL_Renderer* Rendering::_Renderer = nullptr;
-
 std::vector<std::unique_ptr<Rendering::Batch>> Rendering::_Batches = {};
-
 std::vector<Rendering::Line> Rendering::_Lines = {};
-std::vector<SDL_Vertex> Rendering::_Vertices = {};
-std::vector<int> Rendering::_Indices = {};
 
 SDL_FColor toFColor(const SDL_Color& c)
 {
@@ -41,67 +36,42 @@ void Rendering::DrawLine(float x1, float v1, float x2, float v2, SDL_Color color
 	Rendering::_Lines.emplace_back(Line{ x1, v1, x2, v2, color });
 }
 
-Rendering::Batch* Rendering::CreateBatch(SDL_Texture* texture)
+Rendering::Batch* Rendering::_CreateBatch(SDL_Texture* texture)
 {
 	auto batch = std::make_unique<Batch>();
 	auto ptr = batch.get();
-
-	if (texture)
-		ptr->texture = texture;
-	else
-		ptr->texture = nullptr;
-
+	ptr->scene = SceneManager::GetCurrentScene();
+	ptr->texture = (texture) ? texture : nullptr;
 	_Batches.push_back(std::move(batch));
 	return ptr;
 }
 
+Rendering::Batch* Rendering::_FindBatch(SDL_Texture* texture)
+{
+	for (size_t i = 0; i < _Batches.size(); i++)
+	{
+		Rendering::Batch* obj = _Batches[i].get();
+		if (obj->texture == texture)
+			return obj;
+	}
+	return nullptr;
+}
+
+Rendering::Batch* Rendering::_FindOrCreateBatch(Components::Sprite* sprite)
+{
+	Rendering::Batch* currentBatch = _FindBatch((sprite) ? sprite->texture : nullptr);
+
+	if (!currentBatch)
+		currentBatch = _CreateBatch((sprite) ? sprite->texture : nullptr);
+
+	return currentBatch;
+}
+
 void Rendering::DrawQuad(float x, float y, float w, float h, float rotation, Components::Sprite* sprite, const SDL_Color& color)
 {
-	Rendering::Batch* currentBatch = nullptr;
-	for (auto& batch : _Batches)
-	{
-		if (sprite)
-		{
-			if (batch.get()->texture == sprite->texture)
-			{
-				currentBatch = batch.get();
-				break;
-			}
-		}
-		else
-		{
-			if (batch.get()->texture == nullptr)
-			{
-				currentBatch = batch.get();
-			}
-		}
-	}
-
-	if (currentBatch == nullptr && sprite)
-		currentBatch = Rendering::CreateBatch(sprite->texture);
-	else if(currentBatch == nullptr && !sprite)
-		currentBatch = Rendering::CreateBatch(nullptr);
+	Rendering::Batch* currentBatch = Rendering::_FindOrCreateBatch(sprite);
 
 	SDL_FColor quadColor = toFColor(color);
-	SDL_Vertex vertices[4];
-
-	vertices[0].position = { x, y };
-	vertices[1].position = { x + w, y };
-	vertices[2].position = { x, y + h };
-	vertices[3].position = { x + w, y + h };
-
-	if (sprite)
-	{
-		float u1 = sprite->u1; // left
-		float u2 = sprite->u2; // right
-		float v1 = sprite->v1; // top
-		float v2 = sprite->v2; // botto
-
-		vertices[0].tex_coord = { u1, v1 }; // top-left
-		vertices[1].tex_coord = { u2, v1 }; // top-right
-		vertices[2].tex_coord = { u1, v2 }; // bottom-left
-		vertices[3].tex_coord = { u2, v2 }; // bottom-right
-	}
 
 	const int startIndex = currentBatch->_Vertices.size();
 	int indices[6] =
@@ -117,8 +87,36 @@ void Rendering::DrawQuad(float x, float y, float w, float h, float rotation, Com
 	const int index = static_cast<int>(rotation) % 360;
 	const float cos = cosTable[index];
 	const float sin = sinTable[index];
-	const SDL_FPoint center = { w / 2.0 + x,  h / 2.0 + y };
 
+	float posX = x - camera.position.x;
+	float posY = y - camera.position.y;
+	const SDL_FPoint center = { w / 2.0 + posX,  h / 2.0 + posY};
+	SDL_Vertex vertices[4];
+
+	vertices[0].position = { posX, posY };
+	vertices[1].position = { posX + w, posY };
+	vertices[2].position = { posX, posY + h };
+	vertices[3].position = { posX + w, posY + h };
+
+	if (sprite)
+	{
+		float u1 = sprite->u1; // left
+		float u2 = sprite->u2; // right
+		float v1 = sprite->v1; // top
+		float v2 = sprite->v2; // botto
+
+		if (sprite->flippedX)
+		{
+			float temp = u1;
+			u1 = u2;
+			u2 = temp;
+		}
+
+		vertices[0].tex_coord = { u1, v1 }; // top-left
+		vertices[1].tex_coord = { u2, v1 }; // top-right
+		vertices[2].tex_coord = { u1, v2 }; // bottom-left
+		vertices[3].tex_coord = { u2, v2 }; // bottom-right
+	}
 	for (size_t i = 0; i < 4; i++)
 	{
 		//Rotation
@@ -139,7 +137,6 @@ void Rendering::PushToScreen()
 	for (auto& b : _Batches)
 	{
 		auto currentBatch = b.get();
-
 		if (currentBatch->texture == nullptr)
 		{
 			SDL_RenderGeometry(
@@ -150,7 +147,7 @@ void Rendering::PushToScreen()
 				currentBatch->_Indices.data(),
 				currentBatch->_Indices.size());
 		}
-		else
+		else if (currentBatch->texture)
 		{
 			SDL_RenderGeometry(
 				Rendering::GetRenderer(),
@@ -166,10 +163,6 @@ void Rendering::PushToScreen()
 
 	SDL_Color color;
 	SDL_GetRenderDrawColor(Rendering::_Renderer, &color.r, &color.g, &color.b, &color.a);
-
-	SDL_SetRenderDrawColor(Rendering::_Renderer, 255, 0, 0, 255);
-	SDL_RenderLine(Rendering::_Renderer, 600, 0, 600 + 150, 150);
-
 	if (!_Lines.empty())
 		for (size_t i = 0; i < _Lines.size(); i++)
 		{

@@ -14,6 +14,15 @@ void Input::Process()
 	SDL_Event e;
 	while (SDL_PollEvent(&e))
 	{
+		if (e.type == SDL_EVENT_WINDOW_RESIZED)
+	    {
+			int x, y;
+			SDL_GetWindowSize(FractalEngineCore::window, &x, &y);
+			FractalEngineCore::width = x;
+			FractalEngineCore::width = y;
+			std::cout << "Window resized to " << FractalEngineCore::width << "x" << FractalEngineCore::height << std::endl;
+		}
+
 		if (e.type == SDL_EVENT_KEY_DOWN)
 			currentKeys[e.key.scancode] = true;
 		if (e.type == SDL_EVENT_KEY_UP)

@@ -4,99 +4,96 @@
 
 using namespace Components;
 
-namespace Functions
+inline bool Physics::Functions::CheckCollision(const CollisionBox& a, const CollisionBox& b) // AABB Collision?
 {
-	inline bool CheckCollision(const CollisionBox& collBox1, const CollisionBox& collBox2) // AABB Collision?
+	if (a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY)
 	{
-		if (collBox1.minX <= collBox2.maxX && collBox1.maxX >= collBox2.minX &&
-			collBox1.minY <= collBox2.maxY && collBox1.maxY >= collBox2.minY)
-		{
-			return true;
-		}
-		return false;
+		return true;
 	}
+	return false;
+}
 
-	void Collide(GameObject* obj, GameObject* other)
+void Physics::Functions::Collide(GameObject* obj, GameObject* other, const Physics::CollisionInfo& info)
+{
+	if (!obj || !other) return;
+}
+
+inline void Physics::Functions::Gravity(Physics2D* phys)
+{
+	if (!phys) return;
+	const Vector2 worldGravity = { 0, 1000.0f };
+	phys->Accelerate(worldGravity);
+}
+
+inline void Physics::Functions::Movement(GameObject* obj, Components::Physics2D* physComp)
+{
+	if (!physComp) return;
+
+	const Vector2 velocity = physComp->position_current - physComp->position_old;
+	// Save current position
+	physComp->position_old = physComp->position_current;
+	// Perform verlet intergration
+
+	physComp->position_current = physComp->position_current + velocity + physComp->acceleration * FractalEngineCore::deltaTime * FractalEngineCore::deltaTime;
+
+	// Reset acceleration and set position
+	obj->transform.position = physComp->position_current;
+	physComp->acceleration = { 0,0 };
+}
+
+void Physics::Functions::UpdatePhysics(GameObject* object)
+{
+	Physics2D* physicsComponent = object->GetComponent<Physics2D>();
+	auto& objectList = SceneManager::GetCurrentScene()->objects;
+	Gravity(physicsComponent);
+	Movement(object, physicsComponent);
+
+	for (size_t j = 0; j < objectList.size(); j++)
 	{
-		Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
+		if (objectList[j]->GetType() != GAMEOBJECT) continue;
+		GameObject* other = static_cast<GameObject*>(objectList[j]);
+		if (other == object) continue;
 
-		if (!physicsComponent) return;
+		Physics2D* otherComponent = other->GetComponent<Physics2D>();
+		const Vector2 objectVec = (physicsComponent) ? physicsComponent->position_current : object->transform.position;
+		const Vector2 otherVec = (otherComponent) ? otherComponent->position_current : other->transform.position;
+		const Vector2 collision_axis = objectVec - otherVec;
 
-		const CollisionBox objBox = obj->GetCollisionBox();
-		const CollisionBox otherBox = other->GetCollisionBox();
-
-		const float penetrationX = std::min(objBox.maxX, otherBox.maxX) - std::max(objBox.minX, otherBox.minX);
-		const float penetrationY = std::min(objBox.maxY, otherBox.maxY) - std::max(objBox.minY, otherBox.minY);
-
-		if (penetrationX < penetrationY)
+		if (CheckCollision(object->GetCollisionBox(), other->GetCollisionBox()))
 		{
-			if (obj->transform.position.x < other->transform.position.x)
-				obj->transform.position.x -= penetrationX;
-			else
-				obj->transform.position.x += penetrationX;
-		}
-		else
-		{
-			if (obj->transform.position.y < other->transform.position.y)
-				obj->transform.position.y -= penetrationY;
-			else
-				obj->transform.position.y += penetrationY;
-		}
+			auto A = object->GetCollisionBox();
+			auto B = other->GetCollisionBox();
 
-		Vector2 normal = (obj->transform.position - other->transform.position).normalized();
-		if (normal.length() == 0) normal = Vector2(0, 1);
-		else normal = normal.normalized();
+			float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
+			float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
 
-		Physics2D* otherPhysics = other->GetComponent<Physics2D>();;
-		if (otherPhysics)
-		{
-			otherPhysics->velocity = -Vector2::reflect(physicsComponent->velocity, normal) * Physics::Values::friction;
-		}
-		physicsComponent->velocity = Vector2::reflect(physicsComponent->velocity, normal) * Physics::Values::friction;
-	}
-
-	void UpdatePhysics(GameObject* object)
-	{
-		Physics2D* physicsComponent = object->GetComponent<Physics2D>();
-		if (!physicsComponent)
-			return;
-
-		physicsComponent->acceleration = physicsComponent->force / physicsComponent->mass;
-
-		bool anyCollision = false;
-		auto &objects = SceneManager::GetCurrentScene()->objects;
-
-		for (auto& p : objects)
-		{
-			if (p->GetType() != Type::GAMEOBJECT) continue;
-
-			GameObject* other = static_cast<GameObject*>(p);
-
-			if (other == object)
+			if (overlapX <= 0 || overlapY <= 0)
 				continue;
 
-			if (CheckCollision(object->GetCollisionBox(), other->GetCollisionBox()))
+			if (overlapX < overlapY)
 			{
-				Collide(object, other);
-				anyCollision = true;
+				float delta = (collision_axis.x < 0) ? -1.0f : 1.0f;
+				//Fix collision on X
+				if (physicsComponent)
+				{
+					physicsComponent->position_current.x += overlapX * 0.9f * delta;
+					physicsComponent->position_old.x = physicsComponent->position_current.x;
+				}
+			}
+			else
+			{
+				float delta = (collision_axis.y < 0) ? -1.0f : 1.0f;
+				//Fix collision on Y
+				if (physicsComponent)
+				{
+					physicsComponent->position_current.y += overlapY * delta;
+					physicsComponent->position_old.y = physicsComponent->position_current.y;
+				}
 			}
 		}
-		if (!anyCollision)
-		{
-			if (physicsComponent->useGravity)
-			{
-				physicsComponent->acceleration.y += Physics::Values::worldGravity;
-			}
-		}
-
-		float& time = FractalEngineCore::deltaTime;
-		physicsComponent->velocity += physicsComponent->acceleration * time;
-		object->transform.position += physicsComponent->velocity * time;
-
-		physicsComponent->force.x = 0;
-		physicsComponent->force.y = 0;
 	}
 }
+
 
 void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all GameObjects with Physics2D component
 {

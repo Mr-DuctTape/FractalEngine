@@ -14,10 +14,9 @@ struct Vector2
 		x = posX;
 		y = posY;
 	}
-	static Vector2 reflect(const Vector2& v, const Vector2& n);
 	Vector2 normalized() const; //Returns a normalized vector
 	void Normalize(); //Normalizes the vector 
-	float length() const; //Returns length of vector
+	float Magnitude() const; //Returns length of vector
 	
 	static float Dot(const Vector2& a, const Vector2& b)
 	{

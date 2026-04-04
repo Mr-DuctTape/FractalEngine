@@ -8,10 +8,12 @@ class Scene;
 
 class Rendering
 {
-private:
+public:
 	struct Batch
 	{
 		static int batchNumber;
+
+		Scene* scene = nullptr;
 		SDL_Texture* texture = nullptr;
 		std::vector<int> _Indices = {};
 		std::vector<SDL_Vertex> _Vertices = {};
@@ -20,30 +22,13 @@ private:
 			std::cout << "Created batch: " << ++batchNumber << "\n";
 		}
 	};
+private:
 	static std::vector<std::unique_ptr<Batch>> _Batches;
-	static Batch* _GetBatch(SDL_Texture* texture)
-	{ 
-		if (!texture) return _Batches[0].get();
-		for (size_t i = 0; i < _Batches.size(); i++)
-		{
-			auto obj = _Batches[i].get();
-			if (obj->texture)
-				if (obj->texture == texture)
-					return obj;
-		}
-	}
-	static Batch* _FindBatch(SDL_Texture* texture)
-	{
-		if (!texture) return _Batches[0].get();
-		for (size_t i = 0; i < _Batches.size(); i++)
-		{
-			auto obj = _Batches[i].get();
-			if (obj->texture)
-				if (obj->texture == texture)
-					return obj;
-		}
-	}
+	static Rendering::Batch* _FindBatch(SDL_Texture* texture);
+	static Rendering::Batch* _CreateBatch(SDL_Texture* texture);
+	static Rendering::Batch* _FindOrCreateBatch(Components::Sprite * sprite);
 
+	//Figure out better way to draw lines? Batching?
 	struct Line
 	{
 		float x1;
@@ -52,8 +37,6 @@ private:
 		float v2;
 		SDL_Color color;
 	};
-	static std::vector<SDL_Vertex> _Vertices;
-	static std::vector<int> _Indices;
 	static std::vector<Line> _Lines;
 
 	static SDL_Renderer* _Renderer;
@@ -70,8 +53,6 @@ private:
 		}
 		calculated = true;
 	}
-
-	static Rendering::Batch* CreateBatch(SDL_Texture* texture);
 public:
 	static void Init(SDL_Window* window)
 	{

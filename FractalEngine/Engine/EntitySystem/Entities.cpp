@@ -1,6 +1,7 @@
 #include "Entities.h"
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
+#include "../Physics/PhysicsFunctions.h"
 
 using namespace Components;
 
@@ -91,7 +92,6 @@ void Animator::SetAnimation(const std::string& name)
 void Animator::SetSpeed(float speed)
 {
 	this->_animationSpeed = speed;
-	std::cout << _animationSpeed << "\n";
 }
 
 void Animator::Play()
@@ -108,6 +108,53 @@ void Animator::Stop()
 
 unsigned int GameObject::IDNumber = 0;
 
-Camera camera;
 unsigned int& Camera::screenWidth = FractalEngineCore::width;
 unsigned int& Camera::screenHeight = FractalEngineCore::height;
+
+
+//Camera class
+void Camera::follow(GameObject& other)
+{
+	SDL_FRect rect = other.GetRect();
+	position.x = rect.x + rect.w / 2 - screenWidth / 2;
+	position.y = rect.y + rect.h / 2 - screenHeight / 2;
+
+	std::cout << "X: " << position.x << " Y: " << position.y << "\n";
+}
+
+Camera camera;
+
+
+//Tilemap
+
+bool TileMap::LoadTileMap(const char* filePath)
+{
+
+}
+
+bool TileMap::SetTileSet(SDL_Texture* texture)
+{
+	this->tileSet = texture;
+	if (this->tileSet != nullptr)
+		return true;
+	else
+		return false;
+}
+
+void TileMap::Render()
+{
+	//Do stupid rendering before even trying the verticies and indices
+	for (size_t i = 0; i < _tiles.size(); i++)
+	{
+		for (size_t j = 0; j < _tiles[i].size(); j++)
+		{
+			SDL_FRect dstRect{};
+			dstRect.w = this->_tileWidth;
+			dstRect.h = this->_tileHeight;
+			dstRect.x = 0;
+			dstRect.y = 0;
+
+			SDL_RenderTexture(Rendering::GetRenderer(), this->tileSet, );
+		}
+	}
+}

@@ -8,6 +8,7 @@ class AssetManager
 private:
 	static std::unordered_map<std::string, SDL_Texture*> textures;
 	static SDL_Texture* CreateTextureBMP(const char* path);
+	static SDL_Color _removeColor;
 
 public:
 	static SDL_Texture* CreateTexture(const std::string& name, const std::string& path);

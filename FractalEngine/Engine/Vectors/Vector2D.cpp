@@ -1,26 +1,23 @@
 #include "Vector2D.h"
 #include <iostream>
 
-Vector2 Vector2::reflect(const Vector2& v, const Vector2& n)
-{
-	return v - 2 * Dot(v, n) * n;
-}
-
 Vector2 Vector2::normalized() const
 {
-	const float len = length();
+	const float len = Magnitude();
 	if (len == 0)
 		return Vector2{ 0,0 };
 	return Vector2{ x / len, y / len };
 }
 void Vector2::Normalize()
 {
-	const float len = length();
+	const float len = Magnitude();
+	if (len == 0)
+		return;
 	x /= len;
 	y /= len;
 }
 
-float Vector2::length() const
+float Vector2::Magnitude() const
 {
 	return sqrt(x * x + y * y);
 }

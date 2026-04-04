@@ -12,6 +12,7 @@ enum Type
 {
 	OBJECT,
 	GAMEOBJECT,
+	TILEMAP,
 	OTHER
 };
 
@@ -32,6 +33,7 @@ namespace Components
 	{
 		GameObject* parent = nullptr;
 		virtual ~Component() {};
+		virtual void Init(const Vector2 pos) {};
 	};
 
 	struct Transform : public Component
@@ -44,6 +46,9 @@ namespace Components
 	{
 		SDL_Texture* texture = nullptr;
 		SDL_Color color = {255, 255, 255, 255};
+
+		bool flippedX = false;
+		bool flippedY = false;
 
 		float u1 = 0.0f;
 		float v1 = 0.0f;
@@ -61,15 +66,27 @@ namespace Components
 
 	struct Physics2D : public Component
 	{
-		Vector2 acceleration;
-		Vector2 velocity;
-		Vector2 force;
+		Vector2 position_current = { 0,0 };
+		Vector2 position_old = { 0,0 };
+		Vector2 acceleration = { 0,0 };
 
 		float mass = 1.0f;
+		float friction = 0.9f;
 		bool useGravity = true;
-		void addForce(const Vector2& force_)
+
+		void Init(const Vector2 pos) override
 		{
-			force += (force_ * 1000.0);
+			position_current = pos;
+			position_old = position_current;
+		}
+
+		void AddForce(const Vector2& force_)
+		{
+			position_current += force_;
+		}
+		void Accelerate(Vector2 acc)
+		{
+			acceleration += acc;
 		}
 	};
 
@@ -146,27 +163,45 @@ namespace Components
 	};
 }
 
-class TileMap
+class TileMap : public Object
 {
+private:
+	Vector2 _position = {};
+	SDL_Texture* _tileSet = nullptr;
+	unsigned int _tileWidth = 0, _tileHeight = 0;
+	std::vector<std::vector<unsigned int>> _tiles;
+public:
+	TileMap(unsigned int tileWidth, unsigned int tileHeight) :
+		_tileWidth(tileWidth), tileHeight(tileHeight)
+	{
 
+	}
+	Type GetType() override
+	{
+		return Type::TILEMAP;
+	}
+	bool LoadTileMap(const char* filePath);
+	bool SetTileSet(SDL_Texture* texture);
+	void Render();
 };
 
 class GameObject : public Object
 {
+public:
+	Components::Transform transform = {};
 private:
 	std::vector<Components::Component*> objComponents;
 	inline void push_back(Components::Component* component)
 	{
 		component->parent = this;
+		component->Init(transform.position);
 		objComponents.push_back(component);
 	}
 	static unsigned int IDNumber;
 	SDL_FRect rect;
 public:
-	Components::Transform transform = {};
 	unsigned int ID;
-
-	inline SDL_FRect& GetRenderTarget()
+	inline SDL_FRect& GetRect()
 	{
 		if (rect.x != transform.position.x)
 			rect.x = transform.position.x;
@@ -182,9 +217,9 @@ public:
 	{
 		return Components::CollisionBox{
 			transform.position.y,                 // minY
-			transform.position.y + GetRenderTarget().h,  // maxY
+			transform.position.y + GetRect().h,  // maxY
 			transform.position.x,                 // minX
-			transform.position.x + GetRenderTarget().w    // maxX
+			transform.position.x + GetRect().w    // maxX
 		};
 	}
 	size_t GetComponentAmount() const
@@ -222,7 +257,7 @@ public:
 		return component;
 	}
 	template <typename T>
-	bool HasComponeny() const
+	bool HasComponent() const
 	{
 		static_assert(std::is_base_of_v<Components::Component, T>, "T must be a component!");
 		for (size_t i = 0; i < objComponents.size(); i++)
@@ -279,17 +314,9 @@ private:
 	static unsigned int& screenWidth;
 	static unsigned int& screenHeight;
 public:
-	Components::Transform transform;
-	void follow(const GameObject& other)
-	{
-		transform.position.x = other.transform.position.x - screenWidth / 2;
-		transform.position.y = other.transform.position.y - screenHeight / 2;
-	}
-	void follow(const Vector2& position)
-	{
-		transform.position.x = position.x - screenWidth / 2;
-		transform.position.y = position.y - screenHeight / 2;
-	}
+	Vector2 position = {};
+	float FOV = 0.0f;
+	void follow(GameObject& other);
 };
 
 extern Camera camera;
