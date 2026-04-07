@@ -1,6 +1,7 @@
 #include "PhysicsFunctions.h"
 #include "../EntitySystem/Entities.h"
 #include "../Core/FractalEngineCore.h"
+#include "../Rendering/RenderingSystem.h"
 
 using namespace Components;
 
@@ -13,9 +14,103 @@ inline bool Physics::Functions::CheckCollision(const CollisionBox& a, const Coll
 	return false;
 }
 
-void Physics::Functions::Collide(GameObject* obj, GameObject* other, const Physics::CollisionInfo& info)
+void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 {
-	if (!obj || !other) return;
+	if (!obj || !obj2) return;
+	static int b = 0;
+	Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
+	if (obj2->GetType() == TILEMAP)
+	{
+		TileMap* tileMap = static_cast<TileMap*>(obj2);
+
+		if (!physicsComponent)
+			return;
+
+		auto& tiles = tileMap->GetTiles();
+
+		for (size_t y = 0; y < tiles.size(); y++)
+		{
+			for (size_t x = 0; x < tiles[y].size(); x++)
+			{
+				//Tilemap collision
+				if (tileMap->IsTileCollidable(x, y) && CheckCollision(obj->GetCollisionBox(), tileMap->GetTileCollisionBox(x, y)))
+				{
+					auto A = obj->GetCollisionBox();
+					auto B = tileMap->GetTileCollisionBox(x, y);
+					Rendering::Debug::DrawCollisionBox(B);
+
+					Vector2 objectVec = physicsComponent->position_current;
+					Vector2 otherVec = { B.minX, B.minY };
+					Vector2 collision_axis = physicsComponent->position_old - otherVec;
+
+					float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
+					float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
+
+					if (overlapX < overlapY)
+					{
+						float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
+						//Fix collision on X
+						if (physicsComponent)
+						{
+							physicsComponent->position_current.x += overlapX * direction;
+							physicsComponent->position_old.x = physicsComponent->position_current.x;
+						}
+					}
+					else
+					{
+						float direction = (collision_axis.y < 0) ? -1.0f : 1.0f;
+						//Fix collision on Y
+						if (physicsComponent)
+						{
+							physicsComponent->position_current.y += overlapY * direction;
+							physicsComponent->position_old.y = physicsComponent->position_current.y;
+						}
+					}
+				}
+			}
+		}
+	}
+	else if (obj2->GetType() == GAMEOBJECT)
+	{
+		//Collision between GameObjects
+
+		GameObject* other = static_cast<GameObject*>(obj2);
+		Physics2D* otherComponent = other->GetComponent<Physics2D>();
+
+		Vector2 objectVec = (physicsComponent) ? physicsComponent->position_current : obj->transform.position;
+		Vector2 otherVec = (otherComponent) ? otherComponent->position_current : other->transform.position;
+		Vector2 collision_axis = objectVec - otherVec;
+
+		if (CheckCollision(obj->GetCollisionBox(), other->GetCollisionBox()))
+		{
+			auto A = obj->GetCollisionBox();
+			auto B = other->GetCollisionBox();
+
+			float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
+			float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
+
+			if (overlapX < overlapY)
+			{
+				float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
+				//Fix collision on X
+				if (physicsComponent)
+				{
+					physicsComponent->position_current.x += overlapX * 0.9f * direction;
+					physicsComponent->position_old.x = physicsComponent->position_current.x;
+				}
+			}
+			else
+			{
+				float direction = (collision_axis.y < 0) ? -1.0f : 1.0f;
+				//Fix collision on Y
+				if (physicsComponent)
+				{
+					physicsComponent->position_current.y += overlapY * direction;
+					physicsComponent->position_old.y = physicsComponent->position_current.y;
+				}
+			}
+		}
+	}
 }
 
 inline void Physics::Functions::Gravity(Physics2D* phys)
@@ -32,8 +127,8 @@ inline void Physics::Functions::Movement(GameObject* obj, Components::Physics2D*
 	const Vector2 velocity = physComp->position_current - physComp->position_old;
 	// Save current position
 	physComp->position_old = physComp->position_current;
-	// Perform verlet intergration
 
+	// Perform verlet intergration
 	physComp->position_current = physComp->position_current + velocity + physComp->acceleration * FractalEngineCore::deltaTime * FractalEngineCore::deltaTime;
 
 	// Reset acceleration and set position
@@ -50,47 +145,16 @@ void Physics::Functions::UpdatePhysics(GameObject* object)
 
 	for (size_t j = 0; j < objectList.size(); j++)
 	{
-		if (objectList[j]->GetType() != GAMEOBJECT) continue;
-		GameObject* other = static_cast<GameObject*>(objectList[j]);
-		if (other == object) continue;
+		if (objectList[j]->GetType() != GAMEOBJECT && objectList[j]->GetType() != TILEMAP)
+			continue;
 
-		Physics2D* otherComponent = other->GetComponent<Physics2D>();
-		const Vector2 objectVec = (physicsComponent) ? physicsComponent->position_current : object->transform.position;
-		const Vector2 otherVec = (otherComponent) ? otherComponent->position_current : other->transform.position;
-		const Vector2 collision_axis = objectVec - otherVec;
-
-		if (CheckCollision(object->GetCollisionBox(), other->GetCollisionBox()))
+		if (objectList[j]->GetType() == GAMEOBJECT)
 		{
-			auto A = object->GetCollisionBox();
-			auto B = other->GetCollisionBox();
-
-			float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
-			float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
-
-			if (overlapX <= 0 || overlapY <= 0)
+			GameObject* other = static_cast<GameObject*>(objectList[j]);
+			if (other == object)
 				continue;
-
-			if (overlapX < overlapY)
-			{
-				float delta = (collision_axis.x < 0) ? -1.0f : 1.0f;
-				//Fix collision on X
-				if (physicsComponent)
-				{
-					physicsComponent->position_current.x += overlapX * 0.9f * delta;
-					physicsComponent->position_old.x = physicsComponent->position_current.x;
-				}
-			}
-			else
-			{
-				float delta = (collision_axis.y < 0) ? -1.0f : 1.0f;
-				//Fix collision on Y
-				if (physicsComponent)
-				{
-					physicsComponent->position_current.y += overlapY * delta;
-					physicsComponent->position_old.y = physicsComponent->position_current.y;
-				}
-			}
 		}
+		Collide(object, objectList[j]);
 	}
 }
 

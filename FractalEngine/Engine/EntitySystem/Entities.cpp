@@ -2,11 +2,18 @@
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
 #include "../Physics/PhysicsFunctions.h"
+#include <fstream>
+#include <iostream>
 
 using namespace Components;
 
-std::unordered_map<std::string, Components::Animator::Animation> Components::Animator::_animations;
+/// --- STATIC Variables ---
+unsigned int GameObject::IDNumber = 0;
+unsigned int& Camera::screenWidth = FractalEngineCore::width;
+unsigned int& Camera::screenHeight = FractalEngineCore::height;
 
+// --- ANIMATOR COMPONENT ---
+std::unordered_map<std::string, Components::Animator::Animation> Components::Animator::_animations;
 void Animator::CreateAnimation(const std::string& name,
 	unsigned int frames,
 	float speed,
@@ -38,7 +45,6 @@ void Animator::CreateAnimation(const std::string& name,
 	_animationSpeed = speed;
 	Animator::_animations.emplace(name, animation);
 }
-
 inline void Animator::Init()
 {
 	if (_hasInit) return;
@@ -52,10 +58,11 @@ inline void Animator::Init()
 	}
 	_hasInit = true;
 }
-
 void Animator::Update(const float deltaTime)
 {
 	auto* animation = &_currentAnimation;
+
+	if (!animation->spriteSheet) return;
 
 	if (animation->spriteSheet->w == 0 || animation->spriteSheet->h == 0) return;
 	animation->timer += deltaTime;
@@ -77,7 +84,6 @@ void Animator::Update(const float deltaTime)
 	sprite->u2 = (animation->spriteX + animation->spriteWidth) / static_cast<float>(animation->spriteSheet->w);
 	sprite->v2 = (animation->spriteY + animation->spriteHeight) / static_cast<float>(animation->spriteSheet->h);
 }
-
 void Animator::SetAnimation(const std::string& name)
 {
 	auto it = Animator::_animations.find(name);
@@ -88,73 +94,238 @@ void Animator::SetAnimation(const std::string& name)
 	_currentAnimation.savedSprite = sprite->texture;
 	sprite->texture = _currentAnimation.spriteSheet;
 }
-
 void Animator::SetSpeed(float speed)
 {
 	this->_animationSpeed = speed;
 }
-
 void Animator::Play()
 {
 	isPlaying = true;
 }
-
 void Animator::Stop()
 {
 	sprite->texture = _currentAnimation.savedSprite;
 	sprite->ResetUV();
 	isPlaying = false;
 }
+///---------------------------
 
-unsigned int GameObject::IDNumber = 0;
+// ----- GAMEOBJECT CLASS -----
+void GameObject::SetPosition(const Vector2& pos)
+{
+	Physics2D* physComp = GetComponent<Physics2D>();
+	if (!physComp)
+	{
+		transform.position = pos;
+		return;
+	}
 
-unsigned int& Camera::screenWidth = FractalEngineCore::width;
-unsigned int& Camera::screenHeight = FractalEngineCore::height;
+	physComp->position_current = pos;
+	physComp->position_old = pos;
+	transform.position = pos;
+}
 
-
-//Camera class
+// ----- CAMERA CLASS -----
 void Camera::follow(GameObject& other)
 {
 	SDL_FRect rect = other.GetRect();
-	position.x = rect.x + rect.w / 2 - screenWidth / 2;
-	position.y = rect.y + rect.h / 2 - screenHeight / 2;
-
-	std::cout << "X: " << position.x << " Y: " << position.y << "\n";
+	position.x = (rect.x + rect.w) / 1.1 - screenWidth / 2;
+	position.y = (rect.y + rect.h) / 1.1 - screenHeight / 2;
 }
-
 Camera camera;
+/// ------- TILEMAP CLASS --------
 
+// --- GET Functions ----
 
-//Tilemap
-
-bool TileMap::LoadTileMap(const char* filePath)
+TileMap::TileProperties TileMap::_GetTileProperties(unsigned int ID)
 {
+	if (ID >= _tileProperties.size())
+	{
+		std::cout << "ID TOO BIG! Could not find Tile properties ID: " << ID << "\n";
+		return TileMap::TileProperties{};
+	}
+	if (ID == _tileProperties[ID].ID)
+	{
+		return _tileProperties[ID];
+	}
 
+	std::cout << "Could not find Tile properties ID: " << ID << "\n";
+	return TileMap::TileProperties{};
+}
+Components::CollisionBox TileMap::GetTileCollisionBox(unsigned int x, unsigned int y)
+{
+	// Scale to get Tilemap coords -> World coords
+	TileMap::TileScale scale = GetTileScale();
+
+	float worldX = (float)(position.x + x) * scale.combinedX;
+	float worldY = (float)(position.y + y) * scale.combinedY;
+
+	Components::CollisionBox box{
+			worldY ,                
+			worldY + scale.combinedY,  
+			worldX,                
+			worldX + scale.combinedX};
+
+	return box;
+}
+bool TileMap::InRange(unsigned int x, unsigned int y)
+{
+	if (y >= _tiles.size() || x >= _tiles[y].size())
+		return false;
+	return true;
+}
+bool TileMap::IsTileCollidable(unsigned int x, unsigned int y)
+{
+	if (!InRange(x, y))
+		return false;
+
+	TileProperties properties = _GetTileProperties(_tiles[y][x]);
+	return properties.isCollidable;
+}
+float TileMap::GetTileFriction(unsigned int x, unsigned int y)
+{
+	if (!InRange(x, y))
+		return 0.0f;
+
+	TileProperties properties = _GetTileProperties(_tiles[y][x]);
+	return properties.friction;
+}
+TileMap::TileScale TileMap::GetTileScale()
+{
+	TileScale scale;
+	scale.pixelHeight = _tilePixelHeight;
+	scale.pixelWidth = _tilePixelWidth;
+	scale.tileScaleX = _tileScaleX;
+	scale.tileScaleY = _tileScaleY;
+	scale.combinedX = _tilePixelWidth * _tileScaleX;
+	scale.combinedY = _tilePixelHeight * _tileScaleY;
+	return scale;
 }
 
-bool TileMap::SetTileSet(SDL_Texture* texture)
+// ---- SET Functions -----
+bool TileMap::SetTileFriction(unsigned int ID, float friction)
 {
-	this->tileSet = texture;
-	if (this->tileSet != nullptr)
+	if (ID >= _tileProperties.size())
+		return false;
+	if (_tileProperties[ID].ID == ID)
+	{
+		_tileProperties[ID].friction = friction;
+		return true;
+	}
+	return false;
+}
+bool TileMap::SetTileCollidable(unsigned int ID, bool isCollidable)
+{
+	if (ID >= _tileProperties.size())
+		return false;
+	if (_tileProperties[ID].ID == ID)
+	{
+		_tileProperties[ID].isCollidable = isCollidable;
+		return true;
+	}
+	return false;
+}
+bool TileMap::SetTileSet(SDL_Texture* texture, unsigned int tileNumber)
+{
+	if (texture == nullptr)
+		return false;
+
+	if (_tileProperties.size() != 0)
+		_tileProperties.clear();
+
+	_currentTileSet.spriteMap = texture;
+	_currentTileSet.numberOfTiles = tileNumber;
+
+	for (size_t i = 0; i < tileNumber; i++) //Create properties for each tile ID
+	{
+		_tileProperties.emplace_back();
+		_tileProperties[i].ID = i;
+	}
+
+	if (_currentTileSet.spriteMap == texture && _currentTileSet.numberOfTiles == tileNumber)
 		return true;
 	else
 		return false;
 }
 
+// --- MAP Functions ----
+void TileMap::PrintTileMap()
+{
+	for (size_t i = 0; i < _tiles.size(); i++)
+	{
+		for (size_t j = 0; j < _tiles[i].size(); j++)
+		{
+			if (_tiles[i][j] > _currentTileSet.numberOfTiles)
+			{
+				std::cout << "Tile read failure i: " << i << " j: " << j << "\n";
+				return;
+			}
+			std::cout << _tiles[i][j];
+		}
+		std::cout << "\n";
+	}
+}
+bool TileMap::LoadTileMap(const char* filePath)
+{
+	if (!filePath) return false;
+	std::string line;
+	std::ifstream readFile(filePath);
+	if (!readFile) return false;
+
+	unsigned int y = 0;
+	while (std::getline(readFile, line))
+	{
+		if (!line.empty() && std::isdigit(line[0]))
+		{
+			if (_tiles.size() <= y)
+			{
+				_tiles.emplace_back();
+			}
+			for (size_t i = 0; i < line.size(); i++)
+			{
+				if (!std::isdigit(line[0]))
+					continue;
+
+				int number = line[i] - '0';
+				_tiles[y].push_back(number);
+			}
+			y++;
+		}
+	}
+	return true;
+}
 void TileMap::Render()
 {
-	//Do stupid rendering before even trying the verticies and indices
+	//Do simple rendering before even trying the verticies and indices
+	if (!this->_currentTileSet.spriteMap)
+		return;
+
+	if (_tiles.size() <= 0)
+		return;
+
+	TileMap::TileScale scale = GetTileScale();
+
+	SDL_FRect srcRect = {};
+	srcRect.w = scale.pixelWidth;
+	srcRect.h = scale.pixelHeight;
+	srcRect.y = 0;
+
 	for (size_t i = 0; i < _tiles.size(); i++)
 	{
 		for (size_t j = 0; j < _tiles[i].size(); j++)
 		{
 			SDL_FRect dstRect{};
-			dstRect.w = this->_tileWidth;
-			dstRect.h = this->_tileHeight;
-			dstRect.x = 0;
-			dstRect.y = 0;
+			dstRect.w = (int)scale.combinedX;
+			dstRect.h = (int)scale.combinedY;
+			dstRect.x = (int)(position.x + (j * dstRect.w)) - camera.position.x;
+			dstRect.y = (int)(position.y + (i * dstRect.h)) - camera.position.y;
 
-			SDL_RenderTexture(Rendering::GetRenderer(), this->tileSet, );
+			unsigned int tileID = _tiles[i][j];
+			if (tileID > _currentTileSet.numberOfTiles)
+				tileID = _currentTileSet.numberOfTiles - 1;
+
+			srcRect.x = srcRect.w * tileID;
+			SDL_RenderTexture(Rendering::GetRenderer(), this->_currentTileSet.spriteMap, &srcRect, &dstRect);
 		}
 	}
 }

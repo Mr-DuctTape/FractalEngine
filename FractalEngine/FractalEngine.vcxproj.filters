@@ -78,4 +78,7 @@
   <ItemGroup>
     <None Include="SDL3.dll" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Textures\Tilemap.txt" />
+  </ItemGroup>
 </Project>

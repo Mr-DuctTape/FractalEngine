@@ -9,6 +9,17 @@ class Scene;
 class Rendering
 {
 public:
+	class Debug
+	{
+	private:
+		static std::vector<SDL_FRect> collisionBoxes;
+	public:
+		static void DrawCollisionBox(const Components::CollisionBox& box);
+		static std::vector<SDL_FRect>& GetCollisionBoxes()
+		{
+			return collisionBoxes;
+		}
+	};
 	struct Batch
 	{
 		static int batchNumber;
@@ -19,7 +30,9 @@ public:
 		std::vector<SDL_Vertex> _Vertices = {};
 		Batch()
 		{
-			std::cout << "Created batch: " << ++batchNumber << "\n";
+			_Indices.reserve(2500);
+			_Vertices.reserve(2000);
+			++batchNumber;
 		}
 	};
 private:
@@ -58,7 +71,8 @@ public:
 	{
 		if (!_Renderer)
 		{
-			_Lines.reserve(10000);
+			_Lines.reserve(1000);
+			_Batches.reserve(1000);
 			calculateTables();
 			_Renderer = SDL_CreateRenderer(window, NULL);
 		}

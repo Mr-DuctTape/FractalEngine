@@ -9,7 +9,7 @@ int main()
 	// Create objects on default scene
 	GameObject& obj = CreateObject<GameObject>();
 	GameObject& obj2 = CreateObject<GameObject>();
-	GameObject& obj3 = CreateObject<GameObject>();
+	TileMap& tilemap = CreateObject<TileMap>();
 
 	// Create scene and load it
 	SceneManager::CreateScene("Test2");
@@ -22,10 +22,8 @@ int main()
 	// Set positions and sizes
 	test.transform.position = { 600, 500 };
 	test2.transform.position = { 600, 50 };
-	obj.transform.position = { 600, 0 };
+	obj.transform.position = { 600, -500 };
 	obj2.transform.position = { 500, -200 };
-	obj3.transform.position = { 600, 800 };
-	obj3.GetRect().w = 800;
 
 	// Add components
 	obj.AddComponent<Components::Physics2D>();
@@ -37,10 +35,10 @@ int main()
 	test2.AddComponent<Components::Animator>();
 
 	// Setup animation
-	Components::Animator* animator = obj.GetComponent<Components::Animator>();
-	AssetManager::CreateTexture("Bob", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\bob.bmp");
-	animator->CreateAnimation("BobAnimation", 5, 0.1f, AssetManager::GetTexture("Bob"));
-	animator->SetAnimation("BobAnimation");
+	//Components::Animator* animator = obj.GetComponent<Components::Animator>();
+	//AssetManager::CreateTexture("Bob", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\bob.bmp");
+	//animator->CreateAnimation("BobAnimation", 5, 0.1f, AssetManager::GetTexture("Bob"));
+	//animator->SetAnimation("BobAnimation");
 
 	// Apply animation to other objects
 	Components::Animator* a = test2.GetComponent<Components::Animator>();
@@ -51,13 +49,21 @@ int main()
 	b->SetAnimation("BobAnimation");
 	b->SetSpeed(0.5f);
 
-
-	//obj.GetComponent<Components::Sprite>()->flippedX = true;
-
 	bool flipped = false;
 
+	AssetManager::CreateTexture("Tilemap", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\TileMap.bmp");
+
+	const char* path = "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\Tilemap.txt";
+	tilemap.LoadTileMap(path);
+	tilemap.SetTileSet(AssetManager::GetTexture("Tilemap"), 2);
+	tilemap.SetTileScale(5.0f, 5.0f);
+	tilemap.SetTilePixels(32, 32);
+	tilemap.PrintTileMap();
+	tilemap.SetTileCollidable(1, true);
+	std::cout << tilemap.GetTileCollisionBox(4, 0) << "\n";
 	// Load default scene
 	SceneManager::LoadScene("Default");
+	tilemap.position = { 0,0 };
 	while (FractalEngine::running)
 	{
 		camera.follow(obj);
@@ -72,14 +78,13 @@ int main()
 		if (Input::GetButtonDown(SDL_SCANCODE_SPACE) && !flipped)
 		{
 			flipped = true;
-			obj.GetComponent<Components::Sprite>()->flippedX = true;
+			//obj.GetComponent<Components::Sprite>()->flippedX = true;
 		}
 		else if (Input::GetButtonDown(SDL_SCANCODE_SPACE) && flipped)
 		{
 			flipped = false;
-			obj.GetComponent<Components::Sprite>()->flippedX = false;
+			//obj.GetComponent<Components::Sprite>()->flippedX = false;
 		}
-
 
 		Components::Physics2D* phys = obj.GetComponent<Components::Physics2D>();
 		if (!phys) continue;

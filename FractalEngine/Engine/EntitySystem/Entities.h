@@ -166,22 +166,84 @@ namespace Components
 class TileMap : public Object
 {
 private:
-	Vector2 _position = {};
-	SDL_Texture* _tileSet = nullptr;
-	unsigned int _tileWidth = 0, _tileHeight = 0;
+	struct TileSet
+	{
+		SDL_Texture* spriteMap = nullptr;
+		unsigned int numberOfTiles = 0;
+	};
+	struct TileProperties
+	{
+		unsigned int ID = 0;
+		bool isCollidable = false;
+		float friction = 0.0f;
+	};
+	TileSet _currentTileSet = {};
+
+	std::vector<TileProperties> _tileProperties;
 	std::vector<std::vector<unsigned int>> _tiles;
+
+	unsigned int _tilePixelWidth = 0, _tilePixelHeight = 0;
+	float _tileScaleX = 0.0f, _tileScaleY = 0.0f;
+	TileMap::TileProperties _GetTileProperties(unsigned int ID);
+
 public:
-	TileMap(unsigned int tileWidth, unsigned int tileHeight) :
-		_tileWidth(tileWidth), tileHeight(tileHeight)
+	Vector2 position = {0.0f,0.0f};
+	TileMap(){}
+	TileMap
+	(unsigned int tilePixelWidth, unsigned int tilePixelHeight,
+	 float tileScaleX, float tileScaleY) :
+		_tilePixelWidth(tilePixelWidth), _tilePixelHeight(tilePixelHeight),
+		_tileScaleX(tileScaleX), _tileScaleY(tileScaleY)
 	{
 
 	}
+	inline void SetTileScale(float tileScaleX, float tileScaleY)
+	{
+		_tileScaleX = tileScaleX;
+		_tileScaleY = tileScaleY;
+	}
+	// Set the pixel width and height of the tiles in the map. 
+	// They need to be exactly the amount of the ones in the texture.
+	inline void SetTilePixels(unsigned int tilePixelWidth, unsigned int tilePixelHeight)
+	{
+		_tilePixelWidth = tilePixelWidth;
+		_tilePixelHeight = tilePixelHeight;
+	}
+	inline bool InRange(unsigned int x, unsigned int y);
+
 	Type GetType() override
 	{
 		return Type::TILEMAP;
 	}
+
+	// Loads map from a .txt file
+	// Map is supposed to be made of whole numbers so that it can be mapped onto the Tileset
 	bool LoadTileMap(const char* filePath);
-	bool SetTileSet(SDL_Texture* texture);
+
+	bool SetTileSet(SDL_Texture* texture, unsigned int tileNumber);
+	bool SetTileCollidable(unsigned int ID, bool isCollidable);
+	bool SetTileFriction(unsigned int ID, float friction);
+
+	std::vector<std::vector<unsigned int>>& GetTiles()
+	{
+		return _tiles;
+	}
+
+	bool IsTileCollidable(unsigned int x, unsigned int y); 
+	float GetTileFriction(unsigned int x, unsigned int y); 
+	struct TileScale
+	{
+		unsigned int pixelWidth = 0;
+		unsigned int pixelHeight = 0;
+		float tileScaleX = 0.0f;
+		float tileScaleY = 0.0f;
+		float combinedX = 0.0f;
+		float combinedY = 0.0f;
+	};
+	TileScale GetTileScale();
+	Components::CollisionBox GetTileCollisionBox(unsigned int x, unsigned int y);
+
+	void PrintTileMap();
 	void Render();
 };
 
@@ -201,6 +263,7 @@ private:
 	SDL_FRect rect;
 public:
 	unsigned int ID;
+	void SetPosition(const Vector2& pos);
 	inline SDL_FRect& GetRect()
 	{
 		if (rect.x != transform.position.x)
@@ -255,6 +318,20 @@ public:
 		T* component = new T();
 		push_back(component);
 		return component;
+	}
+	template <typename T>
+	bool RemoveComponent()
+	{
+		for (size_t i = 0; i < objComponents.size(); i++)
+		{
+			if (T* component = dynamic_cast<T*>(objComponents[i]))
+			{
+				delete objComponents[i];
+				objComponents.erase(objComponents.begin() + i);
+				return true;
+			}
+		}
+		return false;
 	}
 	template <typename T>
 	bool HasComponent() const
@@ -336,4 +413,13 @@ T& CreateObject(const T& value)
 	auto location = new T(value);
 	SceneManager::GetCurrentScene()->objects.push_back(location);
 	return *location;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Components::CollisionBox& box)
+{
+	os << "CollisionBox(minX: " << box.minX
+		<< ", maxX: " << box.maxX
+		<< ", minY: " << box.minY
+		<< ", maxY: " << box.maxY << ")";
+	return os;
 }

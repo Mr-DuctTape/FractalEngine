@@ -12,6 +12,20 @@ SDL_Renderer* Rendering::_Renderer = nullptr;
 std::vector<std::unique_ptr<Rendering::Batch>> Rendering::_Batches = {};
 std::vector<Rendering::Line> Rendering::_Lines = {};
 
+
+std::vector<SDL_FRect> Rendering::Debug::collisionBoxes = {};
+
+void Rendering::Debug::DrawCollisionBox(const Components::CollisionBox& box)
+{
+	SDL_FRect rect;
+	rect.x = box.minX - camera.position.x;
+	rect.y = box.minY - camera.position.y;
+	rect.w = box.maxX - box.minX;
+	rect.h = box.maxY - box.minY;
+
+	collisionBoxes.push_back(rect);
+}
+
 SDL_FColor toFColor(const SDL_Color& c)
 {
 	return SDL_FColor{
@@ -33,6 +47,11 @@ void Rendering::ClearScreen(SDL_Color color)
 
 void Rendering::DrawLine(float x1, float v1, float x2, float v2, SDL_Color color)
 {
+	for (const auto& line : _Lines )
+	{
+		if (line.x1 == x1 && line.x2 == x2 && line.v1 == v1 && line.v2 == v2)
+			return;
+	}
 	Rendering::_Lines.emplace_back(Line{ x1, v1, x2, v2, color });
 }
 
@@ -134,6 +153,9 @@ void Rendering::DrawQuad(float x, float y, float w, float h, float rotation, Com
 
 void Rendering::PushToScreen()
 {
+	if (!Rendering::_Renderer)
+		return;
+
 	for (auto& b : _Batches)
 	{
 		auto currentBatch = b.get();
@@ -169,7 +191,16 @@ void Rendering::PushToScreen()
 			SDL_SetRenderDrawColor(Rendering::_Renderer, _Lines[i].color.r, _Lines[i].color.g, _Lines[i].color.b, _Lines[i].color.a);
 			SDL_RenderLine(Rendering::_Renderer, _Lines[i].x1, _Lines[i].v1, _Lines[i].x2, _Lines[i].v2);
 		}
+	_Lines.clear();
+
+	for (auto& box : Debug::GetCollisionBoxes())
+	{
+		SDL_SetRenderDrawColor(Rendering::GetRenderer(), 255, 255, 255, 255);
+		SDL_RenderRect(Rendering::GetRenderer(), &box);
+	}
 
 	SDL_SetRenderDrawColor(Rendering::_Renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::_Renderer);
+
+	Debug::GetCollisionBoxes().clear();
 }

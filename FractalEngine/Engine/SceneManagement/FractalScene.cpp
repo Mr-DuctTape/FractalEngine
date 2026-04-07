@@ -23,6 +23,12 @@ void Scene::Render()
 	Rendering::ClearScreen();
 	for (auto& obj : objects)
 	{
+		if (obj->GetType() == Type::TILEMAP)
+		{
+			TileMap* tileMap = static_cast<TileMap*>(obj);
+			tileMap->Render();
+			continue;
+		}
 		if (obj->GetType() != Type::GAMEOBJECT) continue;
 
 		GameObject* gameObj = static_cast<GameObject*>(obj);
@@ -36,7 +42,6 @@ void Scene::Render()
 		SDL_Color color = (sprtComponent) ? sprtComponent->color : ChangeColor(gameObj);
 
 		Components::Animator* animator = gameObj->GetComponent<Components::Animator>();
-
 		if (animator)
 			animator->Update(FractalEngineCore::deltaTime);
 
