@@ -12,10 +12,17 @@ public:
 	class Debug
 	{
 	private:
-		static std::vector<SDL_FRect> collisionBoxes;
+		struct Box
+		{
+			SDL_FRect rect = {};
+			SDL_Color color = {};
+			bool solid = false;
+			int lifeTime = 0;
+		};
+		static std::vector<Box> collisionBoxes;
 	public:
-		static void DrawCollisionBox(const Components::CollisionBox& box);
-		static std::vector<SDL_FRect>& GetCollisionBoxes()
+		static void DrawCollisionBox(const Components::CollisionBox& box, const SDL_Color& color, bool solid);
+		static std::vector<Box>& GetCollisionBoxes()
 		{
 			return collisionBoxes;
 		}
@@ -75,6 +82,7 @@ public:
 			_Batches.reserve(1000);
 			calculateTables();
 			_Renderer = SDL_CreateRenderer(window, NULL);
+			SDL_SetRenderDrawBlendMode(_Renderer, SDL_BLENDMODE_BLEND);
 		}
 	}
 	static SDL_Renderer* GetRenderer()

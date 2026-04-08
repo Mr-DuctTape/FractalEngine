@@ -168,7 +168,7 @@ class TileMap : public Object
 private:
 	struct TileSet
 	{
-		SDL_Texture* spriteMap = nullptr;
+		SDL_Texture* spriteSheet = nullptr;
 		unsigned int numberOfTiles = 0;
 	};
 	struct TileProperties
@@ -187,7 +187,16 @@ private:
 	TileMap::TileProperties _GetTileProperties(unsigned int ID);
 
 public:
+	enum TileDebugMode
+	{
+		NONE,
+		NEARBY,
+		FULL
+	};
+
 	Vector2 position = {0.0f,0.0f};
+	TileDebugMode debugMode = TileDebugMode::NEARBY;
+
 	TileMap(){}
 	TileMap
 	(unsigned int tilePixelWidth, unsigned int tilePixelHeight,
@@ -221,14 +230,15 @@ public:
 	bool LoadTileMap(const char* filePath);
 
 	bool SetTileSet(SDL_Texture* texture, unsigned int tileNumber);
+	// ID starts at 0 -> ... 
 	bool SetTileCollidable(unsigned int ID, bool isCollidable);
+	// ID starts at 0 -> ...
 	bool SetTileFriction(unsigned int ID, float friction);
 
 	std::vector<std::vector<unsigned int>>& GetTiles()
 	{
 		return _tiles;
 	}
-
 	bool IsTileCollidable(unsigned int x, unsigned int y); 
 	float GetTileFriction(unsigned int x, unsigned int y); 
 	struct TileScale

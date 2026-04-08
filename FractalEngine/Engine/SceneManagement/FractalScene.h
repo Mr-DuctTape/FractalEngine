@@ -60,7 +60,6 @@ public:
 	static void LoadDefault()
 	{
 		bool default_exists = (SceneManager::scenes.find("Default") != SceneManager::scenes.end()) ? true : false;
-	
 		if (default_exists)
 			LoadScene("Default");
 		else

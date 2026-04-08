@@ -3,6 +3,7 @@
 #include "../EntitySystem/Entities.h"
 #include "../SceneManagement/FractalScene.h"
 #include <iostream>
+#include <algorithm>
 
 float Rendering::cosTable[360] = {};
 float Rendering::sinTable[360] = {};
@@ -13,9 +14,9 @@ std::vector<std::unique_ptr<Rendering::Batch>> Rendering::_Batches = {};
 std::vector<Rendering::Line> Rendering::_Lines = {};
 
 
-std::vector<SDL_FRect> Rendering::Debug::collisionBoxes = {};
+std::vector<Rendering::Debug::Box> Rendering::Debug::collisionBoxes = {};
 
-void Rendering::Debug::DrawCollisionBox(const Components::CollisionBox& box)
+void Rendering::Debug::DrawCollisionBox(const Components::CollisionBox& box, const SDL_Color& color, bool solid)
 {
 	SDL_FRect rect;
 	rect.x = box.minX - camera.position.x;
@@ -23,7 +24,12 @@ void Rendering::Debug::DrawCollisionBox(const Components::CollisionBox& box)
 	rect.w = box.maxX - box.minX;
 	rect.h = box.maxY - box.minY;
 
-	collisionBoxes.push_back(rect);
+	Rendering::Debug::Box a;
+	a.rect = rect;
+	a.color = color;
+	a.solid = solid;
+
+	collisionBoxes.push_back(a);
 }
 
 SDL_FColor toFColor(const SDL_Color& c)
@@ -156,6 +162,24 @@ void Rendering::PushToScreen()
 	if (!Rendering::_Renderer)
 		return;
 
+	SDL_Color color;
+	SDL_GetRenderDrawColor(Rendering::_Renderer, &color.r, &color.g, &color.b, &color.a);
+
+	for (auto& box : Debug::GetCollisionBoxes())
+	{
+		SDL_SetRenderDrawColor(Rendering::GetRenderer(), box.color.r, box.color.g, box.color.b, box.color.a);
+		if (box.solid)
+			SDL_RenderFillRect(Rendering::GetRenderer(), &box.rect);
+		else
+			SDL_RenderRect(Rendering::GetRenderer(), &box.rect);
+
+		box.lifeTime++;
+	}
+
+	auto& boxes = Debug::GetCollisionBoxes();
+
+	boxes.clear();
+
 	for (auto& b : _Batches)
 	{
 		auto currentBatch = b.get();
@@ -183,8 +207,6 @@ void Rendering::PushToScreen()
 		currentBatch->_Indices.clear();
 	}
 
-	SDL_Color color;
-	SDL_GetRenderDrawColor(Rendering::_Renderer, &color.r, &color.g, &color.b, &color.a);
 	if (!_Lines.empty())
 		for (size_t i = 0; i < _Lines.size(); i++)
 		{
@@ -193,14 +215,6 @@ void Rendering::PushToScreen()
 		}
 	_Lines.clear();
 
-	for (auto& box : Debug::GetCollisionBoxes())
-	{
-		SDL_SetRenderDrawColor(Rendering::GetRenderer(), 255, 255, 255, 255);
-		SDL_RenderRect(Rendering::GetRenderer(), &box);
-	}
-
 	SDL_SetRenderDrawColor(Rendering::_Renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::_Renderer);
-
-	Debug::GetCollisionBoxes().clear();
 }

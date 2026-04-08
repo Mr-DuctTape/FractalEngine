@@ -135,6 +135,14 @@ void Camera::follow(GameObject& other)
 Camera camera;
 /// ------- TILEMAP CLASS --------
 
+// ---- HELPER Functions ----
+bool TileMap::InRange(unsigned int x, unsigned int y)
+{
+	if (y >= _tiles.size() || x >= _tiles[y].size())
+		return false;
+	return true;
+}
+
 // --- GET Functions ----
 
 TileMap::TileProperties TileMap::_GetTileProperties(unsigned int ID)
@@ -167,12 +175,6 @@ Components::CollisionBox TileMap::GetTileCollisionBox(unsigned int x, unsigned i
 			worldX + scale.combinedX};
 
 	return box;
-}
-bool TileMap::InRange(unsigned int x, unsigned int y)
-{
-	if (y >= _tiles.size() || x >= _tiles[y].size())
-		return false;
-	return true;
 }
 bool TileMap::IsTileCollidable(unsigned int x, unsigned int y)
 {
@@ -233,7 +235,7 @@ bool TileMap::SetTileSet(SDL_Texture* texture, unsigned int tileNumber)
 	if (_tileProperties.size() != 0)
 		_tileProperties.clear();
 
-	_currentTileSet.spriteMap = texture;
+	_currentTileSet.spriteSheet = texture;
 	_currentTileSet.numberOfTiles = tileNumber;
 
 	for (size_t i = 0; i < tileNumber; i++) //Create properties for each tile ID
@@ -242,7 +244,7 @@ bool TileMap::SetTileSet(SDL_Texture* texture, unsigned int tileNumber)
 		_tileProperties[i].ID = i;
 	}
 
-	if (_currentTileSet.spriteMap == texture && _currentTileSet.numberOfTiles == tileNumber)
+	if (_currentTileSet.spriteSheet == texture && _currentTileSet.numberOfTiles == tileNumber)
 		return true;
 	else
 		return false;
@@ -265,7 +267,7 @@ void TileMap::PrintTileMap()
 		std::cout << "\n";
 	}
 }
-bool TileMap::LoadTileMap(const char* filePath)
+bool TileMap::LoadTileMap(const char* filePath) // TODO: Make a better system for loading tilemaps from files
 {
 	if (!filePath) return false;
 	std::string line;
@@ -297,7 +299,7 @@ bool TileMap::LoadTileMap(const char* filePath)
 void TileMap::Render()
 {
 	//Do simple rendering before even trying the verticies and indices
-	if (!this->_currentTileSet.spriteMap)
+	if (!_currentTileSet.spriteSheet)
 		return;
 
 	if (_tiles.size() <= 0)
@@ -310,22 +312,33 @@ void TileMap::Render()
 	srcRect.h = scale.pixelHeight;
 	srcRect.y = 0;
 
-	for (size_t i = 0; i < _tiles.size(); i++)
+	for (size_t y = 0; y < _tiles.size(); y++)
 	{
-		for (size_t j = 0; j < _tiles[i].size(); j++)
+		for (size_t x = 0; x < _tiles[y].size(); x++)
 		{
 			SDL_FRect dstRect{};
 			dstRect.w = (int)scale.combinedX;
 			dstRect.h = (int)scale.combinedY;
-			dstRect.x = (int)(position.x + (j * dstRect.w)) - camera.position.x;
-			dstRect.y = (int)(position.y + (i * dstRect.h)) - camera.position.y;
+			dstRect.x = (int)(position.x + (x * dstRect.w)) - camera.position.x;
+			dstRect.y = (int)(position.y + (y * dstRect.h)) - camera.position.y;
 
-			unsigned int tileID = _tiles[i][j];
+			unsigned int tileID = _tiles[y][x];
 			if (tileID > _currentTileSet.numberOfTiles)
 				tileID = _currentTileSet.numberOfTiles - 1;
 
 			srcRect.x = srcRect.w * tileID;
-			SDL_RenderTexture(Rendering::GetRenderer(), this->_currentTileSet.spriteMap, &srcRect, &dstRect);
+			SDL_RenderTexture(Rendering::GetRenderer(), _currentTileSet.spriteSheet, &srcRect, &dstRect);
+
+			if (!IsTileCollidable(x, y) && debugMode == TileDebugMode::FULL)
+			{
+				auto box = GetTileCollisionBox(x, y);
+				Rendering::Debug::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
+			}
+			else if (IsTileCollidable(x, y) && debugMode == TileDebugMode::FULL)
+			{
+				auto box = GetTileCollisionBox(x, y);
+				Rendering::Debug::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
+			}
 		}
 	}
 }

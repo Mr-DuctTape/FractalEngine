@@ -1,16 +1,28 @@
 #include "FractalEngine.h"
+
+#include <crtdbg.h>
+#include <windows.h>
+#include <psapi.h>
 #include <iostream>
 
 int main()
 {
 	// Initialize the engine
+
+	_CrtMemState s1, s2, s3;
+	_CrtMemCheckpoint(&s1);
+
 	FractalEngine::Initialize();
 
 	// Create objects on default scene
 	GameObject& obj = CreateObject<GameObject>();
 	GameObject& obj2 = CreateObject<GameObject>();
-	TileMap& tilemap = CreateObject<TileMap>();
 
+	auto tileMap = AssetManager::CreateTileMap("Tilemap1", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\Test.tilemap");
+	tileMap->SetTileScale(5.0f, 5.0f);
+	tileMap->SetTileCollidable(1, true);
+	tileMap->position = { 0,0 };
+	
 	// Create scene and load it
 	SceneManager::CreateScene("Test2");
 	SceneManager::LoadScene("Test2");
@@ -22,8 +34,9 @@ int main()
 	// Set positions and sizes
 	test.transform.position = { 600, 500 };
 	test2.transform.position = { 600, 50 };
+
 	obj.transform.position = { 600, -500 };
-	obj2.transform.position = { 500, -200 };
+	obj2.transform.position = { 2000, -200 };
 
 	// Add components
 	obj.AddComponent<Components::Physics2D>();
@@ -33,12 +46,6 @@ int main()
 	obj.AddComponent<Components::Animator>();
 	test.AddComponent<Components::Animator>();
 	test2.AddComponent<Components::Animator>();
-
-	// Setup animation
-	//Components::Animator* animator = obj.GetComponent<Components::Animator>();
-	//AssetManager::CreateTexture("Bob", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\bob.bmp");
-	//animator->CreateAnimation("BobAnimation", 5, 0.1f, AssetManager::GetTexture("Bob"));
-	//animator->SetAnimation("BobAnimation");
 
 	// Apply animation to other objects
 	Components::Animator* a = test2.GetComponent<Components::Animator>();
@@ -53,40 +60,29 @@ int main()
 
 	AssetManager::CreateTexture("Tilemap", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\TileMap.bmp");
 
-	const char* path = "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\Tilemap.txt";
-	tilemap.LoadTileMap(path);
-	tilemap.SetTileSet(AssetManager::GetTexture("Tilemap"), 2);
-	tilemap.SetTileScale(5.0f, 5.0f);
-	tilemap.SetTilePixels(32, 32);
-	tilemap.PrintTileMap();
-	tilemap.SetTileCollidable(1, true);
-	std::cout << tilemap.GetTileCollisionBox(4, 0) << "\n";
 	// Load default scene
+
+	Components::Physics2D* phys = obj.GetComponent<Components::Physics2D>();
+
 	SceneManager::LoadScene("Default");
-	tilemap.position = { 0,0 };
 	while (FractalEngine::running)
 	{
 		camera.follow(obj);
 		FractalEngine::Run();
 		if (Input::GetButtonDown(SDL_SCANCODE_1))
 			FractalEngine::Stop();
-		if (Input::GetButtonDown(SDL_SCANCODE_2))
-			SceneManager::LoadScene("Test2");
+	/*	if (Input::GetButtonDown(SDL_SCANCODE_2))
+			SceneManager::LoadScene("Test2");*/
 		if (Input::GetButtonDown(SDL_SCANCODE_3))
 			SceneManager::LoadScene("Default");
 
-		if (Input::GetButtonDown(SDL_SCANCODE_SPACE) && !flipped)
-		{
-			flipped = true;
-			//obj.GetComponent<Components::Sprite>()->flippedX = true;
-		}
-		else if (Input::GetButtonDown(SDL_SCANCODE_SPACE) && flipped)
-		{
-			flipped = false;
-			//obj.GetComponent<Components::Sprite>()->flippedX = false;
-		}
+		if (Input::GetButtonDown(SDL_SCANCODE_SPACE))
+			tileMap->debugMode = TileMap::TileDebugMode::FULL;
+		if (Input::GetButtonDown(SDL_SCANCODE_V))
+			tileMap->debugMode = TileMap::TileDebugMode::NEARBY;
+		if (Input::GetButtonDown(SDL_SCANCODE_B))
+			tileMap->debugMode = TileMap::TileDebugMode::NONE;
 
-		Components::Physics2D* phys = obj.GetComponent<Components::Physics2D>();
 		if (!phys) continue;
 		if (Input::GetButton(SDL_SCANCODE_W))
 		{
@@ -105,5 +101,6 @@ int main()
 			phys->AddForce({ 1.0f, 0.0f });   // positive X = right
 		}
 	}
+
 	return 0;
 }

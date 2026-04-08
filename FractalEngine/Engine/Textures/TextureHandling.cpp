@@ -1,9 +1,14 @@
 #include "TextureHandling.h"
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
+#include "../EntitySystem/Entities.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 std::unordered_map<std::string, SDL_Texture*> AssetManager::textures;
+
+std::vector<AssetManager::Map> AssetManager::tileMaps;
 
 SDL_Color AssetManager::_removeColor = {255, 255, 255};
 
@@ -40,6 +45,8 @@ SDL_Texture* AssetManager::CreateTextureBMP(const char* path)
 	}
 
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(Rendering::GetRenderer(), imageSpecs);
+	SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+	SDL_DestroySurface(imageSpecs);
 	return texture;
 }
 
@@ -76,4 +83,91 @@ void AssetManager::Clear()
 			SDL_DestroyTexture(it->second);
 	}
 	AssetManager::textures.clear();
+}
+
+TileMap* AssetManager::CreateTileMap(const std::string& name, const std::string& filePath)
+{
+	std::ifstream file(filePath.c_str());
+
+	if (!file.is_open())
+	{
+		std::cout << "File not found\n";
+		return nullptr;
+	}
+
+	std::string tileSpritePath;
+	std::string line;
+	unsigned int pixelWidth = 0, pixelHeight = 0;
+	bool readingMap = false;
+
+	TileMap& tileMap = CreateObject<TileMap>();
+
+	while (std::getline(file, line))
+	{
+		if (line.empty()) continue;
+
+		if (readingMap)
+		{
+			std::stringstream ss(line);
+
+			std::vector<unsigned int> row;
+			unsigned int tile;
+			for (char c : line)
+			{
+				if (std::isdigit(c))
+				{
+					row.push_back(c - '0'); 
+				}
+			}
+			if (!row.empty())
+			{
+				tileMap.GetTiles().push_back(row);
+			}
+			continue;
+		}
+
+		if (line.rfind("Tile_size:", 0) == 0)
+		{
+			size_t pos = line.find(":");
+			std::string data = line.substr(pos + 1);
+			std::stringstream ss(data);
+			ss >> pixelWidth >> pixelHeight;
+		}
+		else if (line.rfind("Sprite_Sheet:", 0) == 0)
+		{
+			size_t pos = line.find(":");
+			std::string data = line.substr(pos + 1);
+			std::stringstream ss(data);
+			ss >> tileSpritePath;
+		}
+		else if (line.rfind("Map:", 0) == 0)
+		{
+			readingMap = true;
+			continue;
+		}
+	}
+
+	SDL_Texture* texture = AssetManager::CreateTexture(name + " tile_sheet", tileSpritePath);
+	int tiles = texture->w / pixelWidth;
+	tileMap.SetTilePixels(pixelWidth, pixelHeight);
+	tileMap.SetTileSet(texture, tiles);
+
+	AssetManager::Map temp;
+	temp.name = name;
+	temp.map = &tileMap;
+	AssetManager::tileMaps.push_back(temp);
+
+	return &tileMap;
+}
+
+TileMap* AssetManager::GetTileMap(const std::string& name)
+{
+	for (auto& it : AssetManager::tileMaps)
+	{
+		if (it.name == name)
+		{
+			return it.map;
+		}
+	}
+	return nullptr;
 }

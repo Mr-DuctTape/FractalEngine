@@ -14,10 +14,20 @@ inline bool Physics::Functions::CheckCollision(const CollisionBox& a, const Coll
 	return false;
 }
 
+struct TilePosition
+{
+	unsigned int x;
+	unsigned int y;
+
+	TilePosition operator+(const TilePosition& other)
+	{
+		return TilePosition{ x + other.x, y + other.y };
+	}
+};
+
 void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 {
 	if (!obj || !obj2) return;
-	static int b = 0;
 	Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
 	if (obj2->GetType() == TILEMAP)
 	{
@@ -26,47 +36,69 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 		if (!physicsComponent)
 			return;
 
-		auto& tiles = tileMap->GetTiles();
+		//Convert world coordinates -> tile coordinates
+		auto scale = tileMap->GetTileScale();
+		int objX = (int)(obj->transform.position.x / scale.combinedX);
+		int objY = (int)(obj->transform.position.y / scale.combinedY);
 
-		for (size_t y = 0; y < tiles.size(); y++)
+		//Only check tiles close too the object to save performance
+		TilePosition positions[9] =
 		{
-			for (size_t x = 0; x < tiles[y].size(); x++)
+			{objX, objY}, //Check the obj positon so it doesnt phase through stuff
+			{ objX - 1, objY }, { objX + 1, objY },
+			{ objX, objY - 1 }, { objX, objY + 1 },
+			{ objX + 1, objY + 1 }, { objX - 1, objY + 1 },
+			{ objX + 1, objY - 1 },  {objX - 1, objY - 1 }
+		};
+		unsigned int size = sizeof(positions) / sizeof(positions[0]);
+
+		for (size_t i = 0; i < size; i++)
+		{
+			unsigned int x = positions[i].x;
+			unsigned int y = positions[i].y;
+
+			auto B = tileMap->GetTileCollisionBox(x, y);
+
+			if(tileMap->debugMode == TileMap::TileDebugMode::NEARBY && !tileMap->IsTileCollidable(x,y))
+				Rendering::Debug::DrawCollisionBox(B, { 255, 255, 255, 255}, false);
+			if (tileMap->debugMode == TileMap::TileDebugMode::NEARBY && tileMap->IsTileCollidable(x, y))
+				Rendering::Debug::DrawCollisionBox(B, { 255, 0, 0, 96 }, true);
+
+			if (tileMap->IsTileCollidable(x, y) && CheckCollision(obj->GetCollisionBox(), tileMap->GetTileCollisionBox(x, y)))
 			{
-				//Tilemap collision
-				if (tileMap->IsTileCollidable(x, y) && CheckCollision(obj->GetCollisionBox(), tileMap->GetTileCollisionBox(x, y)))
+				auto A = obj->GetCollisionBox();
+
+				if(tileMap->debugMode)
+					Rendering::Debug::DrawCollisionBox(B, { 40, 255, 40, 128 }, true);
+
+				Vector2 objectVec = physicsComponent->position_current;
+				Vector2 otherVec = { B.minX, B.minY };
+				Vector2 collision_axis = physicsComponent->position_old - otherVec;
+
+				float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
+				float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
+
+				if (overlapX < overlapY)
 				{
-					auto A = obj->GetCollisionBox();
-					auto B = tileMap->GetTileCollisionBox(x, y);
-					Rendering::Debug::DrawCollisionBox(B);
-
-					Vector2 objectVec = physicsComponent->position_current;
-					Vector2 otherVec = { B.minX, B.minY };
-					Vector2 collision_axis = physicsComponent->position_old - otherVec;
-
-					float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
-					float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
-
-					if (overlapX < overlapY)
+					float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
+					//Fix collision on X
+					if (physicsComponent)
 					{
-						float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
-						//Fix collision on X
-						if (physicsComponent)
-						{
-							physicsComponent->position_current.x += overlapX * direction;
-							physicsComponent->position_old.x = physicsComponent->position_current.x;
-						}
-					}
-					else
-					{
-						float direction = (collision_axis.y < 0) ? -1.0f : 1.0f;
-						//Fix collision on Y
-						if (physicsComponent)
-						{
-							physicsComponent->position_current.y += overlapY * direction;
-							physicsComponent->position_old.y = physicsComponent->position_current.y;
-						}
+						physicsComponent->position_current.x += overlapX * direction;
+						physicsComponent->position_old.x = physicsComponent->position_current.x;
 					}
 				}
+				else
+				{
+					float direction = (collision_axis.y < 0) ? -1.0f : 1.0f;
+					//Fix collision on Y
+					if (physicsComponent)
+					{
+						physicsComponent->position_current.y += overlapY * direction;
+						physicsComponent->position_old.y = physicsComponent->position_current.y;
+					}
+				}
+				continue;
 			}
 		}
 	}
