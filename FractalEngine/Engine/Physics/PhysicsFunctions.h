@@ -13,7 +13,7 @@ namespace Physics
 
 	namespace Functions
 	{
-		bool CheckCollision(const Components::CollisionBox& collBox1, const Components::CollisionBox& collBox2);
+		bool CheckCollision(const Components::Collider2D::CollisionBox& a, const Components::Collider2D::CollisionBox& b);
 		void Collide(GameObject* obj, Object* obj2);
 		void Gravity(Components::Physics2D* phys);
 		void Movement(GameObject* obj, Components::Physics2D* physComp);

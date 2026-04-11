@@ -4,8 +4,36 @@
 #include "../Physics/PhysicsFunctions.h"
 #include <fstream>
 #include <iostream>
-
 using namespace Components;
+
+namespace CollisionUtils
+{
+	uint32_t LayerToBit(Layer layer)
+	{
+		return 1 << static_cast<int>(layer);
+	}
+	void SetLayer(Layer& layer, Layer otherLayer)
+	{
+		layer = otherLayer;
+	}
+	void AddCollisionLayer(uint32_t& collisionMask, Layer layer)
+	{
+		if (collisionMask == 0xFFFFFFFFu)
+		{
+			collisionMask = ~collisionMask;
+		}
+		collisionMask = collisionMask | LayerToBit(layer);
+	}
+	void RemoveCollisionLayer(uint32_t& collisionMask, Layer layer)
+	{
+		// XOR Strategy
+		//0110 // old bitmask
+		//0010 // Layer to remove
+		//0100 // (^) operator new bitmask
+		// Just needs one operator compared too two
+		collisionMask = collisionMask ^ LayerToBit(layer);
+	}
+}
 
 /// --- STATIC Variables ---
 unsigned int GameObject::IDNumber = 0;
@@ -119,7 +147,6 @@ void GameObject::SetPosition(const Vector2& pos)
 		transform.position = pos;
 		return;
 	}
-
 	physComp->position_current = pos;
 	physComp->position_old = pos;
 	transform.position = pos;
@@ -138,29 +165,25 @@ Camera camera;
 // ---- HELPER Functions ----
 bool TileMap::InRange(unsigned int x, unsigned int y)
 {
-	if (y >= _tiles.size() || x >= _tiles[y].size())
+	if (y >= _tileGrid.size() || x >= _tileGrid[y].size())
 		return false;
 	return true;
 }
 
 // --- GET Functions ----
-
-TileMap::TileProperties TileMap::_GetTileProperties(unsigned int ID)
+TileMap::TileProperties& TileMap::_GetTileProperties(unsigned int ID)
 {
-	if (ID >= _tileProperties.size())
+	if (ID >= 255 || ID >= _tileProperties.size())
 	{
-		std::cout << "ID TOO BIG! Could not find Tile properties ID: " << ID << "\n";
-		return TileMap::TileProperties{};
+		throw std::out_of_range("ID TOO BIG! Could not find Tile properties ID: " + std::to_string(ID));
 	}
-	if (ID == _tileProperties[ID].ID)
+	if (ID != _tileProperties[ID].ID)
 	{
-		return _tileProperties[ID];
+		throw std::runtime_error("Could not find Tile properties ID: " + std::to_string(ID));
 	}
-
-	std::cout << "Could not find Tile properties ID: " << ID << "\n";
-	return TileMap::TileProperties{};
+	return _tileProperties[ID];
 }
-Components::CollisionBox TileMap::GetTileCollisionBox(unsigned int x, unsigned int y)
+Components::Collider2D::CollisionBox TileMap::GetTileCollisionBox(unsigned int x, unsigned int y)
 {
 	// Scale to get Tilemap coords -> World coords
 	TileMap::TileScale scale = GetTileScale();
@@ -168,29 +191,27 @@ Components::CollisionBox TileMap::GetTileCollisionBox(unsigned int x, unsigned i
 	float worldX = (float)(position.x + x) * scale.combinedX;
 	float worldY = (float)(position.y + y) * scale.combinedY;
 
-	Components::CollisionBox box{
-			worldY ,                
-			worldY + scale.combinedY,  
-			worldX,                
-			worldX + scale.combinedX};
+	Components::Collider2D::CollisionBox box{
+			worldY ,
+			worldY + scale.combinedY,
+			worldX,
+			worldX + scale.combinedX };
 
 	return box;
 }
-bool TileMap::IsTileCollidable(unsigned int x, unsigned int y)
+unsigned int TileMap::GetTileID(unsigned int x, unsigned int y)
 {
 	if (!InRange(x, y))
-		return false;
-
-	TileProperties properties = _GetTileProperties(_tiles[y][x]);
-	return properties.isCollidable;
+		return 0;
+	return _tileGrid[y][x];
+}
+bool TileMap::IsTileSolid(unsigned int x, unsigned int y)
+{
+	return _GetTileProperties(GetTileID(x, y)).isSolid;
 }
 float TileMap::GetTileFriction(unsigned int x, unsigned int y)
 {
-	if (!InRange(x, y))
-		return 0.0f;
-
-	TileProperties properties = _GetTileProperties(_tiles[y][x]);
-	return properties.friction;
+	return _GetTileProperties(GetTileID(x, y)).friction;
 }
 TileMap::TileScale TileMap::GetTileScale()
 {
@@ -204,10 +225,29 @@ TileMap::TileScale TileMap::GetTileScale()
 	return scale;
 }
 
+uint32_t& TileMap::GetTileCollisionMask(unsigned int ID)
+{
+	Uint32 error = -1;
+	if (ID >= 255)
+		return error;
+	if (ID >= _tileProperties.size())
+		return error;
+	return _tileProperties[ID].collisionMask;
+}
+Layer& TileMap::GetTileLayer(unsigned int ID)
+{
+	Layer layer = Layer::ERROR;
+	if (ID >= 255)
+		return layer;
+	if (ID >= _tileProperties.size())
+		return layer;
+	return _tileProperties[ID].layer;
+}
+
 // ---- SET Functions -----
 bool TileMap::SetTileFriction(unsigned int ID, float friction)
 {
-	if (ID >= _tileProperties.size())
+	if(ID >= 255 || ID >= _tileProperties.size())
 		return false;
 	if (_tileProperties[ID].ID == ID)
 	{
@@ -216,16 +256,32 @@ bool TileMap::SetTileFriction(unsigned int ID, float friction)
 	}
 	return false;
 }
-bool TileMap::SetTileCollidable(unsigned int ID, bool isCollidable)
+bool TileMap::SetTileSolid(unsigned int ID, bool isSolid)
 {
-	if (ID >= _tileProperties.size())
+	if (ID >= 255 || ID >= _tileProperties.size())
 		return false;
 	if (_tileProperties[ID].ID == ID)
 	{
-		_tileProperties[ID].isCollidable = isCollidable;
+		_tileProperties[ID].isSolid = isSolid;
 		return true;
 	}
 	return false;
+}
+bool TileMap::SetTileLayer(unsigned int ID, Layer layer)
+{
+	if (ID >= 255 || ID >= _tileProperties.size())
+		return false;
+	if (_tileProperties[ID].ID == ID)
+	{
+		_tileProperties[ID].layer = layer;
+		return true;
+	}
+	return false;
+}
+void TileMap::AddTileCollisionLayer(unsigned int ID, Layer layer)
+{
+	TileProperties& properties = _GetTileProperties(ID);
+	CollisionUtils::AddCollisionLayer(properties.collisionMask, layer);
 }
 bool TileMap::SetTileSet(SDL_Texture* texture, unsigned int tileNumber)
 {
@@ -250,59 +306,33 @@ bool TileMap::SetTileSet(SDL_Texture* texture, unsigned int tileNumber)
 		return false;
 }
 
+// --- OTHER Functions ---
+bool TileMap::CanTileCollideWith(unsigned int x, unsigned int y, Collider2D* other)
+{
+	if (!other)
+		return false;
+
+	TileProperties& properties = _GetTileProperties(GetTileID(x, y));
+	if (properties.ID == -1) // Just a check for the ID
+		return false;
+	if (other->CanCollide(properties.collisionMask))
+		return true;
+	return false;
+}
+void TileMap::RemoveTileCollisionLayer(unsigned int ID, Layer layer)
+{
+	TileProperties& properties = _GetTileProperties(ID);
+	CollisionUtils::RemoveCollisionLayer(properties.collisionMask, layer);
+}
+
 // --- MAP Functions ----
-void TileMap::PrintTileMap()
-{
-	for (size_t i = 0; i < _tiles.size(); i++)
-	{
-		for (size_t j = 0; j < _tiles[i].size(); j++)
-		{
-			if (_tiles[i][j] > _currentTileSet.numberOfTiles)
-			{
-				std::cout << "Tile read failure i: " << i << " j: " << j << "\n";
-				return;
-			}
-			std::cout << _tiles[i][j];
-		}
-		std::cout << "\n";
-	}
-}
-bool TileMap::LoadTileMap(const char* filePath) // TODO: Make a better system for loading tilemaps from files
-{
-	if (!filePath) return false;
-	std::string line;
-	std::ifstream readFile(filePath);
-	if (!readFile) return false;
-
-	unsigned int y = 0;
-	while (std::getline(readFile, line))
-	{
-		if (!line.empty() && std::isdigit(line[0]))
-		{
-			if (_tiles.size() <= y)
-			{
-				_tiles.emplace_back();
-			}
-			for (size_t i = 0; i < line.size(); i++)
-			{
-				if (!std::isdigit(line[0]))
-					continue;
-
-				int number = line[i] - '0';
-				_tiles[y].push_back(number);
-			}
-			y++;
-		}
-	}
-	return true;
-}
 void TileMap::Render()
 {
 	//Do simple rendering before even trying the verticies and indices
 	if (!_currentTileSet.spriteSheet)
 		return;
 
-	if (_tiles.size() <= 0)
+	if (_tileGrid.size() <= 0)
 		return;
 
 	TileMap::TileScale scale = GetTileScale();
@@ -312,9 +342,9 @@ void TileMap::Render()
 	srcRect.h = scale.pixelHeight;
 	srcRect.y = 0;
 
-	for (size_t y = 0; y < _tiles.size(); y++)
+	for (size_t y = 0; y < _tileGrid.size(); y++)
 	{
-		for (size_t x = 0; x < _tiles[y].size(); x++)
+		for (size_t x = 0; x < _tileGrid[y].size(); x++)
 		{
 			SDL_FRect dstRect{};
 			dstRect.w = (int)scale.combinedX;
@@ -322,23 +352,71 @@ void TileMap::Render()
 			dstRect.x = (int)(position.x + (x * dstRect.w)) - camera.position.x;
 			dstRect.y = (int)(position.y + (y * dstRect.h)) - camera.position.y;
 
-			unsigned int tileID = _tiles[y][x];
+			unsigned int tileID = _tileGrid[y][x];
 			if (tileID > _currentTileSet.numberOfTiles)
 				tileID = _currentTileSet.numberOfTiles - 1;
 
 			srcRect.x = srcRect.w * tileID;
 			SDL_RenderTexture(Rendering::GetRenderer(), _currentTileSet.spriteSheet, &srcRect, &dstRect);
-
-			if (!IsTileCollidable(x, y) && debugMode == TileDebugMode::FULL)
+			if (!IsTileSolid(x, y) && debugMode == TileDebugMode::FULL)
 			{
 				auto box = GetTileCollisionBox(x, y);
 				Rendering::Debug::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
 			}
-			else if (IsTileCollidable(x, y) && debugMode == TileDebugMode::FULL)
+			else if (IsTileSolid(x, y) && debugMode == TileDebugMode::FULL)
 			{
 				auto box = GetTileCollisionBox(x, y);
 				Rendering::Debug::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
 			}
 		}
 	}
+}
+
+// --- COMPONENTS ---
+uint32_t Collider2D::LayerToBit(Layer layer)
+{
+	return 1 << static_cast<int>(layer);
+}
+
+void Collider2D::SetLayer(Layer layer)
+{
+	this->layer = layer;
+}
+
+void Collider2D::AddCollisionLayer(Layer layer)
+{
+	if (collisionMask == 0xFFFFFFFFu)
+	{
+		collisionMask = ~collisionMask;
+	}
+	collisionMask = collisionMask | LayerToBit(layer);
+}
+
+void Collider2D::RemoveCollisionLayer(Layer layer)
+{
+	// XOR Strategy
+	//0110 // old bitmask
+	//0010 // Layer to remove
+	//0100 // (^) operator new bitmask
+	// Just needs one operator compared too two
+	collisionMask = collisionMask ^ LayerToBit(layer);
+}
+
+bool Collider2D::CanCollide(const Collider2D& other)
+{
+	return (collisionMask & other.collisionMask) != 0; // Compare bits
+}
+
+bool Collider2D::CanCollide(const uint32_t& collisionMask)
+{
+	return (this->collisionMask & collisionMask) != 0;
+}
+
+Layer& Collider2D::GetLayer()
+{
+	return layer;
+}
+uint32_t& Collider2D::GetCollisionMask()
+{
+	return collisionMask;
 }

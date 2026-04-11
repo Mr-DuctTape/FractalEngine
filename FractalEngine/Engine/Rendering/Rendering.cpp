@@ -12,11 +12,9 @@ int Rendering::Batch::batchNumber = 0;
 SDL_Renderer* Rendering::_Renderer = nullptr;
 std::vector<std::unique_ptr<Rendering::Batch>> Rendering::_Batches = {};
 std::vector<Rendering::Line> Rendering::_Lines = {};
-
-
 std::vector<Rendering::Debug::Box> Rendering::Debug::collisionBoxes = {};
 
-void Rendering::Debug::DrawCollisionBox(const Components::CollisionBox& box, const SDL_Color& color, bool solid)
+void Rendering::Debug::DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid)
 {
 	SDL_FRect rect;
 	rect.x = box.minX - camera.position.x;
@@ -165,21 +163,6 @@ void Rendering::PushToScreen()
 	SDL_Color color;
 	SDL_GetRenderDrawColor(Rendering::_Renderer, &color.r, &color.g, &color.b, &color.a);
 
-	for (auto& box : Debug::GetCollisionBoxes())
-	{
-		SDL_SetRenderDrawColor(Rendering::GetRenderer(), box.color.r, box.color.g, box.color.b, box.color.a);
-		if (box.solid)
-			SDL_RenderFillRect(Rendering::GetRenderer(), &box.rect);
-		else
-			SDL_RenderRect(Rendering::GetRenderer(), &box.rect);
-
-		box.lifeTime++;
-	}
-
-	auto& boxes = Debug::GetCollisionBoxes();
-
-	boxes.clear();
-
 	for (auto& b : _Batches)
 	{
 		auto currentBatch = b.get();
@@ -215,6 +198,16 @@ void Rendering::PushToScreen()
 		}
 	_Lines.clear();
 
+	for (auto& box : Debug::GetCollisionBoxes())
+	{
+		SDL_SetRenderDrawColor(Rendering::GetRenderer(), box.color.r, box.color.g, box.color.b, box.color.a);
+		if (box.solid)
+			SDL_RenderFillRect(Rendering::GetRenderer(), &box.rect);
+		else
+			SDL_RenderRect(Rendering::GetRenderer(), &box.rect);
+	}
+
+	Debug::GetCollisionBoxes().clear();
 	SDL_SetRenderDrawColor(Rendering::_Renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::_Renderer);
 }

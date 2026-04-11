@@ -27,6 +27,16 @@ public:
 class Rendering;
 class GameObject;
 
+enum Layer
+{
+	ERROR = 99999,
+	DEFAULT = 0,
+	PLAYER,
+	ENEMY,
+	GROUND,
+	TRIGGER
+};
+
 namespace Components
 {
 	struct Component
@@ -45,15 +55,15 @@ namespace Components
 	struct Sprite : public Component
 	{
 		SDL_Texture* texture = nullptr;
-		SDL_Color color = {255, 255, 255, 255};
-
-		bool flippedX = false;
-		bool flippedY = false;
 
 		float u1 = 0.0f;
 		float v1 = 0.0f;
 		float u2 = 1.0f;
 		float v2 = 1.0f;
+
+		SDL_Color color = { 255, 255, 255, 255 };
+		bool flippedX = false;
+		bool flippedY = false;
 
 		void ResetUV()
 		{
@@ -69,10 +79,10 @@ namespace Components
 		Vector2 position_current = { 0,0 };
 		Vector2 position_old = { 0,0 };
 		Vector2 acceleration = { 0,0 };
-
 		float mass = 1.0f;
 		float friction = 0.9f;
 		bool useGravity = true;
+		bool isGrounded = false;
 
 		void Init(const Vector2 pos) override
 		{
@@ -95,20 +105,20 @@ namespace Components
 	public:
 		struct Animation
 		{
-			unsigned int numberOfFrames = 0;
-			unsigned int frameIndex = 0;
+			SDL_Texture* spriteSheet = nullptr;
+			SDL_Texture* savedSprite = nullptr;
 
 			float timer = 0.0;
 			float frameTime = 0.0;
+
+			unsigned int numberOfFrames = 0;
+			unsigned int frameIndex = 0;
 
 			unsigned int spriteY = 0;
 			unsigned int spriteX = 0;
 
 			unsigned int spriteWidth = 0;
 			unsigned int spriteHeight = 0;
-
-			SDL_Texture* spriteSheet = nullptr;
-			SDL_Texture* savedSprite = nullptr;
 		};
 	private:
 		static std::unordered_map<std::string, Animation> _animations;
@@ -116,7 +126,6 @@ namespace Components
 		Sprite* sprite = nullptr;
 		float _animationSpeed = 0.0f;
 		friend class Rendering;
-
 		bool _hasInit = false;
 		void Init();
 	public:
@@ -146,20 +155,45 @@ namespace Components
 		void Stop();
 	};
 
-	struct CollisionBox
+	class Collider2D : public Component
 	{
-		float minY;
-		float maxY;
-		float minX;
-		float maxX;
-		CollisionBox()
-			: minY(0), maxY(0), minX(0), maxX(0)
+	public:
+		Collider2D() {}
+		Collider2D(float mnY, float mxY, float mnX, float mxX)
 		{
+			collisionBox.minX = mnX;
+			collisionBox.minY = mnY;
+			collisionBox.maxX = mxX;
+			collisionBox.maxY = mxY;
 		}
-		CollisionBox(float mnY, float mxY, float mnX, float mxX)
-			: minY(mnY), maxY(mxY), minX(mnX), maxX(mxX)
+		struct CollisionBox
 		{
-		}
+			float minY;
+			float maxY;
+			float minX;
+			float maxX;
+			CollisionBox()
+				: minY(0), maxY(0), minX(0), maxX(0)
+			{
+			}
+			CollisionBox(float mnY, float mxY, float mnX, float mxX)
+				: minY(mnY), maxY(mxY), minX(mnX), maxX(mxX)
+			{
+			}
+		};
+		CollisionBox collisionBox = {};
+	private:
+		Layer layer = Layer::DEFAULT;
+		uint32_t collisionMask = 0xFFFFFFFFu; // Set all bits 
+		inline uint32_t LayerToBit(Layer layer);
+	public:
+		void SetLayer(Layer _layer);
+		void AddCollisionLayer(Layer layer);
+		void RemoveCollisionLayer(Layer layer);
+		bool CanCollide(const Collider2D& other);
+		bool CanCollide(const uint32_t& collisionMask);
+		Layer& GetLayer();
+		uint32_t& GetCollisionMask();
 	};
 }
 
@@ -173,18 +207,20 @@ private:
 	};
 	struct TileProperties
 	{
-		unsigned int ID = 0;
-		bool isCollidable = false;
-		float friction = 0.0f;
+		float friction;
+		uint32_t collisionMask;
+		Layer layer;
+		uint8_t ID;
+		bool isSolid;
 	};
-	TileSet _currentTileSet = {};
 
 	std::vector<TileProperties> _tileProperties;
-	std::vector<std::vector<unsigned int>> _tiles;
+	std::vector<std::vector<uint8_t>> _tileGrid;
+	TileSet _currentTileSet = {};
 
 	unsigned int _tilePixelWidth = 0, _tilePixelHeight = 0;
 	float _tileScaleX = 0.0f, _tileScaleY = 0.0f;
-	TileMap::TileProperties _GetTileProperties(unsigned int ID);
+	TileMap::TileProperties& _GetTileProperties(unsigned int ID);
 
 public:
 	enum TileDebugMode
@@ -193,14 +229,25 @@ public:
 		NEARBY,
 		FULL
 	};
-
+	struct TileScale
+	{
+		unsigned int pixelWidth = 0;
+		unsigned int pixelHeight = 0;
+		float tileScaleX = 0.0f;
+		float tileScaleY = 0.0f;
+		float combinedX = 0.0f;
+		float combinedY = 0.0f;
+	};
 	Vector2 position = {0.0f,0.0f};
 	TileDebugMode debugMode = TileDebugMode::NEARBY;
 
+	Type GetType() override
+	{
+		return Type::TILEMAP;
+	}
+
 	TileMap(){}
-	TileMap
-	(unsigned int tilePixelWidth, unsigned int tilePixelHeight,
-	 float tileScaleX, float tileScaleY) :
+	TileMap(unsigned int tilePixelWidth, unsigned int tilePixelHeight, float tileScaleX, float tileScaleY) :
 		_tilePixelWidth(tilePixelWidth), _tilePixelHeight(tilePixelHeight),
 		_tileScaleX(tileScaleX), _tileScaleY(tileScaleY)
 	{
@@ -211,49 +258,37 @@ public:
 		_tileScaleX = tileScaleX;
 		_tileScaleY = tileScaleY;
 	}
-	// Set the pixel width and height of the tiles in the map. 
-	// They need to be exactly the amount of the ones in the texture.
 	inline void SetTilePixels(unsigned int tilePixelWidth, unsigned int tilePixelHeight)
 	{
 		_tilePixelWidth = tilePixelWidth;
 		_tilePixelHeight = tilePixelHeight;
-	}
+	}  	// Set the pixel width and height of the tiles in the map. They need to be exactly the amount of the ones in the texture.
 	inline bool InRange(unsigned int x, unsigned int y);
-
-	Type GetType() override
-	{
-		return Type::TILEMAP;
-	}
-
-	// Loads map from a .txt file
-	// Map is supposed to be made of whole numbers so that it can be mapped onto the Tileset
-	bool LoadTileMap(const char* filePath);
-
 	bool SetTileSet(SDL_Texture* texture, unsigned int tileNumber);
+
 	// ID starts at 0 -> ... 
-	bool SetTileCollidable(unsigned int ID, bool isCollidable);
-	// ID starts at 0 -> ...
+	bool SetTileSolid(unsigned int ID, bool isSolid);
 	bool SetTileFriction(unsigned int ID, float friction);
+	bool SetTileLayer(unsigned int ID, Layer layer);
+	void AddTileCollisionLayer(unsigned int ID, Layer layer);
+	void RemoveTileCollisionLayer(unsigned int ID, Layer layer);
 
-	std::vector<std::vector<unsigned int>>& GetTiles()
-	{
-		return _tiles;
-	}
-	bool IsTileCollidable(unsigned int x, unsigned int y); 
+	bool IsTileSolid(unsigned int x, unsigned int y); 
+	bool CanTileCollideWith(unsigned int x, unsigned int y, Components::Collider2D* other);
+
 	float GetTileFriction(unsigned int x, unsigned int y); 
-	struct TileScale
-	{
-		unsigned int pixelWidth = 0;
-		unsigned int pixelHeight = 0;
-		float tileScaleX = 0.0f;
-		float tileScaleY = 0.0f;
-		float combinedX = 0.0f;
-		float combinedY = 0.0f;
-	};
-	TileScale GetTileScale();
-	Components::CollisionBox GetTileCollisionBox(unsigned int x, unsigned int y);
+	unsigned int GetTileID(unsigned int x, unsigned int y);
 
-	void PrintTileMap();
+	uint32_t& GetTileCollisionMask(unsigned int ID);
+	Layer& GetTileLayer(unsigned int ID);
+	
+	TileScale GetTileScale();
+	Components::Collider2D::CollisionBox GetTileCollisionBox(unsigned int x, unsigned int y);
+	std::vector<std::vector<uint8_t>>& GetTiles()
+	{
+		return _tileGrid;
+	}
+
 	void Render();
 };
 
@@ -271,8 +306,10 @@ private:
 	}
 	static unsigned int IDNumber;
 	SDL_FRect rect;
+
 public:
 	unsigned int ID;
+
 	void SetPosition(const Vector2& pos);
 	inline SDL_FRect& GetRect()
 	{
@@ -286,9 +323,19 @@ public:
 	{
 		return Type::GAMEOBJECT;
 	};
-	inline Components::CollisionBox GetCollisionBox()
+	inline Components::Collider2D::CollisionBox GetCollisionBox()
 	{
-		return Components::CollisionBox{
+		if (HasComponent<Components::Collider2D>())
+		{
+			Components::Collider2D* coll = GetComponent<Components::Collider2D>();
+			coll->collisionBox.minY = transform.position.y;
+			coll->collisionBox.maxY = transform.position.y + GetRect().h;
+			coll->collisionBox.minX = transform.position.x;
+			coll->collisionBox.maxX = transform.position.x + GetRect().w;
+			return coll->collisionBox;
+		}
+		return Components::Collider2D::CollisionBox
+		{
 			transform.position.y,                 // minY
 			transform.position.y + GetRect().h,  // maxY
 			transform.position.x,                 // minX
@@ -423,13 +470,4 @@ T& CreateObject(const T& value)
 	auto location = new T(value);
 	SceneManager::GetCurrentScene()->objects.push_back(location);
 	return *location;
-}
-
-inline std::ostream& operator<<(std::ostream& os, const Components::CollisionBox& box)
-{
-	os << "CollisionBox(minX: " << box.minX
-		<< ", maxX: " << box.maxX
-		<< ", minY: " << box.minY
-		<< ", maxY: " << box.maxY << ")";
-	return os;
 }

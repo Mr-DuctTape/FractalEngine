@@ -17,11 +17,10 @@ public:
 			SDL_FRect rect = {};
 			SDL_Color color = {};
 			bool solid = false;
-			int lifeTime = 0;
 		};
 		static std::vector<Box> collisionBoxes;
 	public:
-		static void DrawCollisionBox(const Components::CollisionBox& box, const SDL_Color& color, bool solid);
+		static void DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid);
 		static std::vector<Box>& GetCollisionBoxes()
 		{
 			return collisionBoxes;
@@ -30,11 +29,10 @@ public:
 	struct Batch
 	{
 		static int batchNumber;
-
-		Scene* scene = nullptr;
-		SDL_Texture* texture = nullptr;
-		std::vector<int> _Indices = {};
 		std::vector<SDL_Vertex> _Vertices = {};
+		std::vector<int> _Indices = {};
+		SDL_Texture* texture = nullptr;
+		Scene* scene = nullptr;
 		Batch()
 		{
 			_Indices.reserve(2500);

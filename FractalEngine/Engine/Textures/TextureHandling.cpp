@@ -110,8 +110,8 @@ TileMap* AssetManager::CreateTileMap(const std::string& name, const std::string&
 		{
 			std::stringstream ss(line);
 
-			std::vector<unsigned int> row;
-			unsigned int tile;
+			std::vector<uint8_t> row;
+			uint8_t tile;
 			for (char c : line)
 			{
 				if (std::isdigit(c))

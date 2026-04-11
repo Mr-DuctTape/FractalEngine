@@ -138,6 +138,7 @@
     <ClInclude Include="Engine\SceneManagement\FractalScene.h" />
     <ClInclude Include="Engine\Vectors\Vector2D.h" />
     <ClInclude Include="Engine\Textures\TextureHandling.h" />
+    <ClInclude Include="Engine\EntitySystem\PrefabManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\EntitySystem\Entities.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="Engine\SceneManagement\FractalScene.cpp" />
     <ClCompile Include="Engine\Vectors\Vector2D.cpp" />
     <ClCompile Include="Engine\Textures\TextureHandling.cpp" />
+    <ClCompile Include="Engine\EntitySystem\PrefabManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL3.dll" />

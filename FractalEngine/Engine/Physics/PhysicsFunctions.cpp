@@ -5,7 +5,7 @@
 
 using namespace Components;
 
-inline bool Physics::Functions::CheckCollision(const CollisionBox& a, const CollisionBox& b) // AABB Collision?
+inline bool Physics::Functions::CheckCollision(const Components::Collider2D::CollisionBox& a, const Components::Collider2D::CollisionBox& b) // AABB Collision?
 {
 	if (a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY)
 	{
@@ -18,17 +18,15 @@ struct TilePosition
 {
 	unsigned int x;
 	unsigned int y;
-
-	TilePosition operator+(const TilePosition& other)
-	{
-		return TilePosition{ x + other.x, y + other.y };
-	}
 };
 
 void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 {
 	if (!obj || !obj2) return;
 	Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
+	if(physicsComponent)
+		physicsComponent->isGrounded = false;
+
 	if (obj2->GetType() == TILEMAP)
 	{
 		TileMap* tileMap = static_cast<TileMap*>(obj2);
@@ -57,26 +55,32 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 			unsigned int x = positions[i].x;
 			unsigned int y = positions[i].y;
 
-			auto B = tileMap->GetTileCollisionBox(x, y);
+			auto objectCollisionBox = obj->GetCollisionBox();
+			auto tileCollisionBox = tileMap->GetTileCollisionBox(x, y);
+			bool tileCollidable = (tileMap->IsTileSolid(x, y) && tileMap->CanTileCollideWith(x, y, obj->GetComponent<Collider2D>()));
 
-			if(tileMap->debugMode == TileMap::TileDebugMode::NEARBY && !tileMap->IsTileCollidable(x,y))
-				Rendering::Debug::DrawCollisionBox(B, { 255, 255, 255, 255}, false);
-			if (tileMap->debugMode == TileMap::TileDebugMode::NEARBY && tileMap->IsTileCollidable(x, y))
-				Rendering::Debug::DrawCollisionBox(B, { 255, 0, 0, 96 }, true);
+			//Tile debug
+			if(tileMap->debugMode == TileMap::TileDebugMode::NEARBY && !tileCollidable)
+				Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 255, 255, 255, 255}, false);
+			if (tileMap->debugMode == TileMap::TileDebugMode::NEARBY && tileCollidable)
+				Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 255, 0, 0, 96 }, true);
 
-			if (tileMap->IsTileCollidable(x, y) && CheckCollision(obj->GetCollisionBox(), tileMap->GetTileCollisionBox(x, y)))
+			if (tileCollidable && CheckCollision(objectCollisionBox, tileCollisionBox))
 			{
-				auto A = obj->GetCollisionBox();
-
 				if(tileMap->debugMode)
-					Rendering::Debug::DrawCollisionBox(B, { 40, 255, 40, 128 }, true);
+					Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 40, 255, 40, 128 }, true);
 
 				Vector2 objectVec = physicsComponent->position_current;
-				Vector2 otherVec = { B.minX, B.minY };
+				Vector2 otherVec = { (tileCollisionBox.minX + tileCollisionBox.maxX) * 0.5f, (tileCollisionBox.minY + tileCollisionBox.maxY) * 0.5f}; // Center of tile
 				Vector2 collision_axis = physicsComponent->position_old - otherVec;
 
-				float overlapX = std::min(A.maxX, B.maxX) - std::max(A.minX, B.minX);
-				float overlapY = std::min(A.maxY, B.maxY) - std::max(A.minY, B.minY);
+				float overlapX = std::min(objectCollisionBox.maxX, tileCollisionBox.maxX) - std::max(objectCollisionBox.minX, tileCollisionBox.minX);
+				float overlapY = std::min(objectCollisionBox.maxY, tileCollisionBox.maxY) - std::max(objectCollisionBox.minY, tileCollisionBox.minY);
+
+				if (physicsComponent->isGrounded && overlapY < 0.01f)
+				{
+					continue; // ignore this collision
+				}
 
 				if (overlapX < overlapY)
 				{
@@ -98,7 +102,6 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 						physicsComponent->position_old.y = physicsComponent->position_current.y;
 					}
 				}
-				continue;
 			}
 		}
 	}
