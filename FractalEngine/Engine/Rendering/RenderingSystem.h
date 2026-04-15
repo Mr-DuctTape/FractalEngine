@@ -1,10 +1,15 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <vector>
-#include "../EntitySystem/Entities.h"
 #include <memory>
+#include "../EntitySystem/Entities.h"
 
 class Scene;
+
+struct TilePositions
+{
+	int x, y;
+};
 
 class Rendering
 {
@@ -20,12 +25,15 @@ public:
 		};
 		static std::vector<Box> collisionBoxes;
 	public:
+		static bool RenderLight;
 		static void DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid);
 		static std::vector<Box>& GetCollisionBoxes()
 		{
 			return collisionBoxes;
 		}
 	};
+
+private:
 	struct Batch
 	{
 		static int batchNumber;
@@ -35,16 +43,35 @@ public:
 		Scene* scene = nullptr;
 		Batch()
 		{
-			_Indices.reserve(2500);
-			_Vertices.reserve(2000);
+			_Indices.reserve(2000);
+			_Vertices.reserve(1000);
 			++batchNumber;
 		}
 	};
-private:
-	static std::vector<std::unique_ptr<Batch>> _Batches;
+
+	static Batch m_ShadowBatch;
+	static std::vector<std::unique_ptr<Batch>> m_Batches;
 	static Rendering::Batch* _FindBatch(SDL_Texture* texture);
 	static Rendering::Batch* _CreateBatch(SDL_Texture* texture);
 	static Rendering::Batch* _FindOrCreateBatch(Components::Sprite * sprite);
+
+	// Rendering layers, light layer, sprite layer 
+	struct RenderingLayer
+	{
+		SDL_Texture* texture = nullptr;
+		~RenderingLayer()
+		{
+			if (texture)
+				SDL_DestroyTexture(texture);
+		}
+	};
+	static RenderingLayer m_lightLayer;
+	static RenderingLayer m_spriteLayer;
+
+	//
+	static SDL_Texture* lightTexture;
+	static unsigned int lightUpdateInterval;
+	static void RenderLights(std::vector<Object*>* objects, bool& lightsInScene);
 
 	//Figure out better way to draw lines? Batching?
 	struct Line
@@ -55,9 +82,9 @@ private:
 		float v2;
 		SDL_Color color;
 	};
-	static std::vector<Line> _Lines;
+	static std::vector<Line> m_Lines;
 
-	static SDL_Renderer* _Renderer;
+	static SDL_Renderer* m_Renderer;
 	static float cosTable[360];
 	static float sinTable[360];
 	static void calculateTables()
@@ -74,21 +101,23 @@ private:
 public:
 	static void Init(SDL_Window* window)
 	{
-		if (!_Renderer)
+		if (!m_Renderer)
 		{
-			_Lines.reserve(1000);
-			_Batches.reserve(1000);
+			m_Lines.reserve(500);
+			m_Batches.reserve(500);
 			calculateTables();
-			_Renderer = SDL_CreateRenderer(window, NULL);
-			SDL_SetRenderDrawBlendMode(_Renderer, SDL_BLENDMODE_BLEND);
+			m_Renderer = SDL_CreateRenderer(window, NULL);
+			SDL_SetRenderVSync(m_Renderer, SDL_RENDERER_VSYNC_DISABLED);
+			SDL_SetRenderDrawBlendMode(m_Renderer, SDL_BLENDMODE_BLEND);
 		}
 	}
-	static SDL_Renderer* GetRenderer()
+	static inline SDL_Renderer* GetRenderer()
 	{
-		return _Renderer;
+		return m_Renderer;
 	}
 	static void ClearScreen(SDL_Color color = { 0, 0, 0, 0 });
 	static void DrawQuad(float x, float y, float w, float h, float rotation, Components::Sprite* sprite, const SDL_Color& color);
 	static void DrawLine(float x1, float v1, float x2, float v2, SDL_Color color);
 	static void PushToScreen();
+	static void SetLightUpdateInterval(unsigned int val);
 };

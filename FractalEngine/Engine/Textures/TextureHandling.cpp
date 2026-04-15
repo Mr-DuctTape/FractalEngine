@@ -2,6 +2,8 @@
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
 #include "../EntitySystem/Entities.h"
+#include "../SceneManagement/FractalScene.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -99,9 +101,9 @@ TileMap* AssetManager::CreateTileMap(const std::string& name, const std::string&
 	std::string line;
 	unsigned int pixelWidth = 0, pixelHeight = 0;
 	bool readingMap = false;
+	TileMap& tileMap = SceneManager::GetCurrentScene()->CreateObject<TileMap>(); // Create tilemap object on scene
 
-	TileMap& tileMap = CreateObject<TileMap>();
-
+	// Parse .tilemap file into usable code
 	while (std::getline(file, line))
 	{
 		if (line.empty()) continue;
@@ -146,6 +148,10 @@ TileMap* AssetManager::CreateTileMap(const std::string& name, const std::string&
 			continue;
 		}
 	}
+
+	size_t width = tileMap.GetTiles()[0].size();
+	size_t height = tileMap.GetTiles().size();
+	tileMap.GetLightLevels().resize(width * height, 0.0f);
 
 	SDL_Texture* texture = AssetManager::CreateTexture(name + " tile_sheet", tileSpritePath);
 	int tiles = texture->w / pixelWidth;

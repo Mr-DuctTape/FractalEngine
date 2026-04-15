@@ -13,8 +13,9 @@ int main()
 	FractalEngine::Initialize();
 
 	// Create objects on default scene
-	GameObject& obj = CreateObject<GameObject>();
-	GameObject& obj2 = CreateObject<GameObject>();
+	Scene* scene = SceneManager::GetCurrentScene();
+	GameObject& obj = scene->CreateObject<GameObject>();
+	GameObject& obj2 = scene->CreateObject<GameObject>();
 
 	auto tileMap = AssetManager::CreateTileMap("Tilemap1", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\Test.tilemap");
 	tileMap->SetTileScale(5.0f, 5.0f);
@@ -26,12 +27,13 @@ int main()
 	SceneManager::LoadScene("Test2");
 
 	// Create objects on "Test2" scene
-	GameObject& test = CreateObject<GameObject>();
-	GameObject& test2 = CreateObject<GameObject>();
+	Scene* sceneTest2 = SceneManager::GetCurrentScene();
+	GameObject& obj3 = sceneTest2->CreateObject<GameObject>();
+	GameObject& obj4 = sceneTest2->CreateObject<GameObject>();
 
 	// Set positions and sizes
-	test.transform.position = { 600, 500 };
-	test2.transform.position = { 600, 50 };
+	obj3.transform.position = { 600, 500 };
+	obj4.transform.position = { 600, 50 };
 
 	obj.transform.position = { 600, -500 };
 	obj2.transform.position = { 400, -200 };
@@ -39,22 +41,22 @@ int main()
 	// Add components
 	obj.AddComponent<Components::Physics2D>();
 	obj2.AddComponent<Components::Physics2D>();
-	test2.AddComponent<Components::Physics2D>();
+	obj4.AddComponent<Components::Physics2D>();
 
 	obj.AddComponent<Components::Animator>();
-	test.AddComponent<Components::Animator>();
-	test2.AddComponent<Components::Animator>();
+	obj3.AddComponent<Components::Animator>();
+	obj4.AddComponent<Components::Animator>();
 
 	AssetManager::CreateTexture("Bob", "C:\\Users\\Ebisu\\source\\repos\\FractalEngine\\FractalEngine\\Textures\\bob.bmp");
 
 	// Apply animation to other objects
-	Components::Animator* a = test2.GetComponent<Components::Animator>();
+	Components::Animator* a = obj4.GetComponent<Components::Animator>();
 	a->CreateAnimation("BobAnimation", 5, 0.1f, AssetManager::GetTexture("Bob"));
 	a->SetAnimation("BobAnimation");
 	a->SetSpeed(0.3f);
 	a->Play();
 
-	Components::Animator* b = test.GetComponent<Components::Animator>();
+	Components::Animator* b = obj3.GetComponent<Components::Animator>();
 	b->SetAnimation("BobAnimation");
 	b->SetSpeed(0.5f);
 	b->Play();
@@ -62,7 +64,6 @@ int main()
 	// Load default scene
 	SceneManager::LoadScene("Default");
 	Components::Physics2D* phys = obj.GetComponent<Components::Physics2D>();
-
 
 	obj2.AddComponent<Components::Collider2D>();
 	obj.AddComponent<Components::Collider2D>();
@@ -74,7 +75,6 @@ int main()
 
 	std::cout << "Collision masks:\n";
 	std::cout << f->GetCollisionMask() << "\n"; 
-
 	tileMap->SetTileLayer(1, Layer::GROUND);
 	std::cout << "Collision Mask for Tile 1: "
 		<< tileMap->GetTileCollisionMask(1) << '\n';
@@ -84,17 +84,46 @@ int main()
 	tileMap->AddTileCollisionLayer(1, Layer::PLAYER);
 	std::cout << "Collision Mask for Tile 1: "
 		<< tileMap->GetTileCollisionMask(1) << '\n';
-
 	std::cout << "Tile ID at (2, 2): "
 		<< tileMap->GetTileID(2, 2) << '\n';
-
 	std::cout << "Layer for Tile 1: "
 		<< tileMap->GetTileLayer(1) << '\n';
 
+	GameObject& obj5 = scene->CreateObject<GameObject>();
+	obj5.AddComponent<Components::Sprite>();
+	auto spr3 = obj5.GetComponent<Components::Sprite>();
+	SDL_Color color  = { 255,255,255,255 };
+	spr3->texture = nullptr;
+	obj5.transform.position = { 50, 50 };
+
+	auto& light = scene->CreateObject<Light2D>();
+	light.transform.position = { 500, 500 };
+	light.range = 590;
+
+	auto& light2 = scene->CreateObject<Light2D>();
+	light2.transform.position = { 100, 400 };
+	light2.range = 1000;
+
+	auto& light3 = scene->CreateObject<Light2D>();
+	light3.transform.position = { 1500, 500 };
+	light3.range = 290;
 	while (FractalEngine::running)
 	{
+		light.transform.position = obj.transform.position;
+		light2.transform.position = obj5.transform.position;
+
+		Vector2 center{ 1500,700 };
+
+		float speed = 0.5f;     // how fast it moves
+		float radius = 800.0f;   // size of the circle
+		static float angle = 0.0f;
+
+		angle += speed * FractalEngineCore::deltaTime;  // deltaTime = time since last frame
+
+		obj5.transform.position.x = center.x + cos(angle) * radius;
+		obj5.transform.position.y = center.y + sin(angle) * radius;
+
 		camera.follow(obj);
-		//Rendering::Debug::DrawCollisionBox(f->collisionBox, { 199, 122, 122, 255 }, true);
 		FractalEngine::Run();
 		if (Input::GetButtonDown(SDL_SCANCODE_1))
 			FractalEngine::Stop();
@@ -102,6 +131,14 @@ int main()
 			SceneManager::LoadScene("Test2");
 		if (Input::GetButtonDown(SDL_SCANCODE_3))
 			SceneManager::LoadScene("Default");
+
+		if (Input::GetButtonDown(SDL_SCANCODE_F))
+			light.range+= 100;
+		if (Input::GetButtonDown(SDL_SCANCODE_C))
+			light.range-=100;
+
+		if (Input::GetButtonDown(SDL_SCANCODE_J))
+			Rendering::Debug::RenderLight = !Rendering::Debug::RenderLight;
 
 		if (Input::GetButtonDown(SDL_SCANCODE_SPACE))
 			tileMap->debugMode = TileMap::TileDebugMode::FULL;

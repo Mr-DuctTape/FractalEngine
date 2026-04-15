@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 class Object;
-#include "../EntitySystem/Entities.h"
 
 class Scene
 {
@@ -28,6 +27,22 @@ public:
 		for (auto obj : objects)
 			delete obj;
 	}
+	template <typename T> //Creates object on the current active scene
+	T& CreateObject()
+	{
+		static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
+		auto location = new T();
+		objects.push_back(location);
+		return *location;
+	}
+	template <typename T>
+	T& CreateObject(const T& value)
+	{
+		static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
+		auto location = new T(value);
+		objects.push_back(location);
+		return *location;
+	}
 };
 
 class SceneManager
@@ -42,13 +57,8 @@ public:
 		if (!SceneManager::currentScene)
 			LoadScene(name);
 	}
-	static void LoadScene(const std::string& name)
-	{
-		auto it = SceneManager::scenes.find(name);
-		if (it != SceneManager::scenes.end())
-			SceneManager::currentScene = it->second.get();
-	}
-	static Scene* getScene(const std::string& name)
+	static void LoadScene(const std::string& name);
+	static Scene* GetScene(const std::string& name)
 	{
 		auto scene = SceneManager::scenes.find(name);
 		return scene->second.get();

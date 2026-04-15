@@ -10,7 +10,6 @@ public:
 	template <typename T>
 	void CreatePrefab(const std::string& name, const T& object)
 	{
-		T prefab = object;
-
+		ObjectPrefabs.emplace(name, object);
 	}
 };

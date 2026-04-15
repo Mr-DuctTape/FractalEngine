@@ -1,5 +1,6 @@
 #include "PhysicsFunctions.h"
 #include "../EntitySystem/Entities.h"
+#include "../SceneManagement/FractalScene.h"
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
 
@@ -19,7 +20,6 @@ struct TilePosition
 	unsigned int x;
 	unsigned int y;
 };
-
 void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 {
 	if (!obj || !obj2) return;
@@ -30,14 +30,13 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 	if (obj2->GetType() == TILEMAP)
 	{
 		TileMap* tileMap = static_cast<TileMap*>(obj2);
-
 		if (!physicsComponent)
 			return;
 
 		//Convert world coordinates -> tile coordinates
 		auto scale = tileMap->GetTileScale();
-		int objX = (int)(obj->transform.position.x / scale.combinedX);
-		int objY = (int)(obj->transform.position.y / scale.combinedY);
+		unsigned int objX = (unsigned int)(obj->transform.position.x / scale.combinedX);
+		unsigned int objY = (unsigned int)(obj->transform.position.y / scale.combinedY);
 
 		//Only check tiles close too the object to save performance
 		TilePosition positions[9] =
@@ -81,7 +80,6 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 				{
 					continue; // ignore this collision
 				}
-
 				if (overlapX < overlapY)
 				{
 					float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
@@ -107,11 +105,11 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 	}
 	else if (obj2->GetType() == GAMEOBJECT)
 	{
-		//Collision between GameObjects
-
 		GameObject* other = static_cast<GameObject*>(obj2);
-		Physics2D* otherComponent = other->GetComponent<Physics2D>();
+		if (!obj->HasComponent<Collider2D>() || !other->HasComponent<Collider2D>())
+			return;
 
+		Physics2D* otherComponent = other->GetComponent<Physics2D>();
 		Vector2 objectVec = (physicsComponent) ? physicsComponent->position_current : obj->transform.position;
 		Vector2 otherVec = (otherComponent) ? otherComponent->position_current : other->transform.position;
 		Vector2 collision_axis = objectVec - otherVec;
@@ -126,8 +124,8 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 
 			if (overlapX < overlapY)
 			{
-				float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
 				//Fix collision on X
+				float direction = (collision_axis.x < 0) ? -1.0f : 1.0f;
 				if (physicsComponent)
 				{
 					physicsComponent->position_current.x += overlapX * 0.9f * direction;
@@ -136,8 +134,8 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 			}
 			else
 			{
+				//Fix collision Y
 				float direction = (collision_axis.y < 0) ? -1.0f : 1.0f;
-				//Fix collision on Y
 				if (physicsComponent)
 				{
 					physicsComponent->position_current.y += overlapY * direction;
@@ -147,14 +145,12 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 		}
 	}
 }
-
 inline void Physics::Functions::Gravity(Physics2D* phys)
 {
 	if (!phys) return;
 	const Vector2 worldGravity = { 0, 1000.0f };
 	phys->Accelerate(worldGravity);
 }
-
 inline void Physics::Functions::Movement(GameObject* obj, Components::Physics2D* physComp)
 {
 	if (!physComp) return;
@@ -170,7 +166,6 @@ inline void Physics::Functions::Movement(GameObject* obj, Components::Physics2D*
 	obj->transform.position = physComp->position_current;
 	physComp->acceleration = { 0,0 };
 }
-
 void Physics::Functions::UpdatePhysics(GameObject* object)
 {
 	Physics2D* physicsComponent = object->GetComponent<Physics2D>();
@@ -182,7 +177,6 @@ void Physics::Functions::UpdatePhysics(GameObject* object)
 	{
 		if (objectList[j]->GetType() != GAMEOBJECT && objectList[j]->GetType() != TILEMAP)
 			continue;
-
 		if (objectList[j]->GetType() == GAMEOBJECT)
 		{
 			GameObject* other = static_cast<GameObject*>(objectList[j]);
@@ -192,8 +186,6 @@ void Physics::Functions::UpdatePhysics(GameObject* object)
 		Collide(object, objectList[j]);
 	}
 }
-
-
 void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all GameObjects with Physics2D component
 {
 	for (size_t i = 0; i < objects.size(); i++)

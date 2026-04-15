@@ -10,7 +10,6 @@ private:
 	static std::unordered_map<std::string, SDL_Texture*> textures;
 	static SDL_Texture* CreateTextureBMP(const char* path);
 	static SDL_Color _removeColor;
-
 	struct Map
 	{
 		std::string name = {};

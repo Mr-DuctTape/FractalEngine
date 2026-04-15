@@ -45,6 +45,12 @@
     <ClInclude Include="Engine\EntitySystem\PrefabManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\EntitySystem\Components.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\EntitySystem\Layer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\mainTest.cpp">
@@ -78,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Engine\EntitySystem\PrefabManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\EntitySystem\Components.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

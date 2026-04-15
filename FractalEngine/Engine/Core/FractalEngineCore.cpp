@@ -34,6 +34,12 @@ void FractalEngineCore::DeltaTime() //Background stuff like deltatime etc
 	if (previous == 0)
 		previous = SDL_GetPerformanceCounter();
 
+	int x, y;
+
+	SDL_GetWindowSizeInPixels(window, &x, &y);
+	FractalEngineCore::width = x;
+	FractalEngineCore::height = y;
+
 	Uint64 now = SDL_GetPerformanceCounter();
 	FractalEngineCore::deltaTime = (float)(now - previous) / SDL_GetPerformanceFrequency();
 	previous = now;

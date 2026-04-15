@@ -129,7 +129,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\EntitySystem\Components.h" />
     <ClInclude Include="Engine\EntitySystem\Entities.h" />
+    <ClInclude Include="Engine\EntitySystem\Layer.h" />
     <ClInclude Include="Engine\FractalEngine.h" />
     <ClInclude Include="Engine\Core\FractalEngineCore.h" />
     <ClInclude Include="Engine\Input\InputSystem.h" />
@@ -141,6 +143,7 @@
     <ClInclude Include="Engine\EntitySystem\PrefabManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\EntitySystem\Components.cpp" />
     <ClCompile Include="Engine\EntitySystem\Entities.cpp" />
     <ClCompile Include="Engine\FractalEngine.cpp" />
     <ClCompile Include="Engine\Core\FractalEngineCore.cpp" />

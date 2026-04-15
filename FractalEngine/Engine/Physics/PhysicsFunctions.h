@@ -4,13 +4,6 @@
 
 namespace Physics
 {
-	struct CollisionInfo
-	{
-		bool collided = false;
-		Vector2 direction = { 0,0 };
-		float penetration = 0.0f;
-	};
-
 	namespace Functions
 	{
 		bool CheckCollision(const Components::Collider2D::CollisionBox& a, const Components::Collider2D::CollisionBox& b);

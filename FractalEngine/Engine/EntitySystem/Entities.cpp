@@ -2,6 +2,9 @@
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
 #include "../Physics/PhysicsFunctions.h"
+#include "../SceneManagement/FractalScene.h"
+#include "Components.h"
+
 #include <fstream>
 #include <iostream>
 using namespace Components;
@@ -40,104 +43,6 @@ unsigned int GameObject::IDNumber = 0;
 unsigned int& Camera::screenWidth = FractalEngineCore::width;
 unsigned int& Camera::screenHeight = FractalEngineCore::height;
 
-// --- ANIMATOR COMPONENT ---
-std::unordered_map<std::string, Components::Animator::Animation> Components::Animator::_animations;
-void Animator::CreateAnimation(const std::string& name,
-	unsigned int frames,
-	float speed,
-	SDL_Texture* spriteSheet)
-{
-	Init();
-
-	Animation animation;
-	animation.numberOfFrames = frames;
-	animation.spriteSheet = spriteSheet;
-
-	animation.spriteHeight = spriteSheet->h;
-	animation.spriteWidth = spriteSheet->w / frames;
-	animation.spriteX = 0;
-	animation.spriteY = 0;
-
-	float texW = 0.0f, texH = 0.0f;
-	if (SDL_GetTextureSize(spriteSheet, &texW, &texH))
-	{
-		sprite->u1 = animation.spriteX / texW;
-		sprite->v1 = animation.spriteY / texH;
-		sprite->u2 = (animation.spriteX + animation.spriteWidth) / texW;
-		sprite->v2 = (animation.spriteY + animation.spriteHeight) / texH;
-	}
-
-	animation.frameIndex = 0;
-	animation.timer = 0.0f;
-	animation.frameTime = speed;
-	_animationSpeed = speed;
-	Animator::_animations.emplace(name, animation);
-}
-inline void Animator::Init()
-{
-	if (_hasInit) return;
-
-	if (!sprite)
-		sprite = parent->GetComponent<Sprite>();
-
-	if (!sprite)
-	{
-		sprite = parent->AddComponent<Sprite>();
-	}
-	_hasInit = true;
-}
-void Animator::Update(const float deltaTime)
-{
-	auto* animation = &_currentAnimation;
-
-	if (!animation->spriteSheet) return;
-
-	if (animation->spriteSheet->w == 0 || animation->spriteSheet->h == 0) return;
-	animation->timer += deltaTime;
-
-	if (animation->timer >= _animationSpeed)
-	{
-		animation->timer -= _animationSpeed;
-
-		animation->frameIndex++;
-
-		if (animation->frameIndex >= animation->numberOfFrames)
-			animation->frameIndex = 0;
-	}
-
-	animation->spriteX = animation->spriteWidth * animation->frameIndex;
-
-	sprite->u1 = animation->spriteX / static_cast<float>(animation->spriteSheet->w);
-	sprite->v1 = animation->spriteY / static_cast<float>(animation->spriteSheet->h);
-	sprite->u2 = (animation->spriteX + animation->spriteWidth) / static_cast<float>(animation->spriteSheet->w);
-	sprite->v2 = (animation->spriteY + animation->spriteHeight) / static_cast<float>(animation->spriteSheet->h);
-}
-void Animator::SetAnimation(const std::string& name)
-{
-	auto it = Animator::_animations.find(name);
-	if (it == Animator::_animations.end()) return;
-	Init();
-
-	_currentAnimation = it->second;
-	_currentAnimation.savedSprite = sprite->texture;
-	sprite->texture = _currentAnimation.spriteSheet;
-}
-void Animator::SetSpeed(float speed)
-{
-	this->_animationSpeed = speed;
-}
-void Animator::Play()
-{
-	isPlaying = true;
-}
-void Animator::Stop()
-{
-	sprite->texture = _currentAnimation.savedSprite;
-	sprite->ResetUV();
-	isPlaying = false;
-}
-///---------------------------
-
 // ----- GAMEOBJECT CLASS -----
 void GameObject::SetPosition(const Vector2& pos)
 {
@@ -155,11 +60,27 @@ void GameObject::SetPosition(const Vector2& pos)
 // ----- CAMERA CLASS -----
 void Camera::follow(GameObject& other)
 {
+	bool foundObject = false;
+	for (auto& obj : SceneManager::GetCurrentScene()->objects)
+	{
+		if (obj->GetType() != Type::GAMEOBJECT)
+			continue;
+
+		GameObject* ob = static_cast<GameObject*>(obj);
+		if (ob == &other)
+		{
+			foundObject = true;
+		}
+	}
+	if (!foundObject)
+		return;
+
 	SDL_FRect rect = other.GetRect();
 	position.x = (rect.x + rect.w) / 1.1 - screenWidth / 2;
 	position.y = (rect.y + rect.h) / 1.1 - screenHeight / 2;
 }
 Camera camera;
+
 /// ------- TILEMAP CLASS --------
 
 // ---- HELPER Functions ----
@@ -171,6 +92,14 @@ bool TileMap::InRange(unsigned int x, unsigned int y)
 }
 
 // --- GET Functions ----
+float* TileMap::_GetTileLightLevel(unsigned int x, unsigned int y)
+{
+	if (!InRange(x, y))
+		return nullptr;
+
+	unsigned int width = _tileGrid[y].size();
+	return &_tileLightLevel[y * width + x];
+}
 TileMap::TileProperties& TileMap::_GetTileProperties(unsigned int ID)
 {
 	if (ID >= 255 || ID >= _tileProperties.size())
@@ -234,20 +163,27 @@ uint32_t& TileMap::GetTileCollisionMask(unsigned int ID)
 		return error;
 	return _tileProperties[ID].collisionMask;
 }
-Layer& TileMap::GetTileLayer(unsigned int ID)
+int TileMap::GetTileLayer(unsigned int ID)
 {
-	Layer layer = Layer::ERROR;
 	if (ID >= 255)
-		return layer;
+		return -1;
 	if (ID >= _tileProperties.size())
-		return layer;
-	return _tileProperties[ID].layer;
+		return -1;
+	return static_cast<int>(_tileProperties[ID].layer);
 }
 
 // ---- SET Functions -----
+void TileMap::_SetTileLightLevel(unsigned int x, unsigned int y, float amount)
+{
+	if (!InRange(x, y))
+		return;
+
+	unsigned int width = _tileGrid[y].size();
+	_tileLightLevel[y * width + x] = amount;
+}
 bool TileMap::SetTileFriction(unsigned int ID, float friction)
 {
-	if(ID >= 255 || ID >= _tileProperties.size())
+	if (ID >= 255 || ID >= _tileProperties.size())
 		return false;
 	if (_tileProperties[ID].ID == ID)
 	{
@@ -311,7 +247,6 @@ bool TileMap::CanTileCollideWith(unsigned int x, unsigned int y, Collider2D* oth
 {
 	if (!other)
 		return false;
-
 	TileProperties& properties = _GetTileProperties(GetTileID(x, y));
 	if (properties.ID == -1) // Just a check for the ID
 		return false;
@@ -325,6 +260,13 @@ void TileMap::RemoveTileCollisionLayer(unsigned int ID, Layer layer)
 	CollisionUtils::RemoveCollisionLayer(properties.collisionMask, layer);
 }
 
+struct Tile
+{
+	SDL_FRect rect;
+	float lightLevel;
+	int ID;
+};
+
 // --- MAP Functions ----
 void TileMap::Render()
 {
@@ -337,10 +279,43 @@ void TileMap::Render()
 
 	TileMap::TileScale scale = GetTileScale();
 
+	unsigned int sizeY = _tileGrid.size();
+	unsigned int sizeX = _tileGrid[0].size();
+
+	if (!textureMap || textureMap->w != sizeX * scale.combinedX || textureMap->h != sizeY * scale.combinedY)
+	{
+		SDL_DestroyTexture(textureMap);
+		textureMap = SDL_CreateTexture(Rendering::GetRenderer(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, sizeX * scale.combinedX, sizeY * scale.combinedY);
+	}
+	else
+	{
+		if (debugMode != TileDebugMode::FULL)
+			return;
+		for (size_t y = 0; y < _tileGrid.size(); y++)
+			for (size_t x = 0; x < _tileGrid[y].size(); x++)
+			{
+				if (!IsTileSolid(x, y))
+				{
+					auto box = GetTileCollisionBox(x, y);
+					Rendering::Debug::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
+				}
+				else if (IsTileSolid(x, y))
+				{
+					auto box = GetTileCollisionBox(x, y);
+					Rendering::Debug::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
+				}
+			}
+
+		return;
+	}
+
 	SDL_FRect srcRect = {};
 	srcRect.w = scale.pixelWidth;
 	srcRect.h = scale.pixelHeight;
 	srcRect.y = 0;
+
+	std::vector<Tile> Tiles;
+	Tiles.reserve(1000);
 
 	for (size_t y = 0; y < _tileGrid.size(); y++)
 	{
@@ -349,15 +324,18 @@ void TileMap::Render()
 			SDL_FRect dstRect{};
 			dstRect.w = (int)scale.combinedX;
 			dstRect.h = (int)scale.combinedY;
-			dstRect.x = (int)(position.x + (x * dstRect.w)) - camera.position.x;
-			dstRect.y = (int)(position.y + (y * dstRect.h)) - camera.position.y;
+			dstRect.x = (int)(position.x + (x * dstRect.w));
+			dstRect.y = (int)(position.y + (y * dstRect.h));
 
 			unsigned int tileID = _tileGrid[y][x];
 			if (tileID > _currentTileSet.numberOfTiles)
 				tileID = _currentTileSet.numberOfTiles - 1;
 
-			srcRect.x = srcRect.w * tileID;
-			SDL_RenderTexture(Rendering::GetRenderer(), _currentTileSet.spriteSheet, &srcRect, &dstRect);
+			float* lightLevel = _GetTileLightLevel(x, y);
+
+			Tile tile{ dstRect, *lightLevel, tileID };
+			Tiles.push_back(tile);
+
 			if (!IsTileSolid(x, y) && debugMode == TileDebugMode::FULL)
 			{
 				auto box = GetTileCollisionBox(x, y);
@@ -370,53 +348,27 @@ void TileMap::Render()
 			}
 		}
 	}
-}
 
-// --- COMPONENTS ---
-uint32_t Collider2D::LayerToBit(Layer layer)
-{
-	return 1 << static_cast<int>(layer);
-}
-
-void Collider2D::SetLayer(Layer layer)
-{
-	this->layer = layer;
-}
-
-void Collider2D::AddCollisionLayer(Layer layer)
-{
-	if (collisionMask == 0xFFFFFFFFu)
+	SDL_SetRenderTarget(Rendering::GetRenderer(), textureMap);
+	SDL_RenderClear(Rendering::GetRenderer());
+	for (auto& T : Tiles)
 	{
-		collisionMask = ~collisionMask;
+		SDL_Color color{ 255,255,255,255 };
+		srcRect.x = srcRect.w * T.ID;
+		float light = (T.lightLevel + 1.0f) * 0.5f;
+		color = {
+			(Uint8)(color.r * light),
+			(Uint8)(color.g * light),
+			(Uint8)(color.b * light),
+			color.a
+		};
+		SDL_SetTextureColorMod(_currentTileSet.spriteSheet, color.r, color.g, color.b);
+		SDL_RenderTexture(Rendering::GetRenderer(), _currentTileSet.spriteSheet, &srcRect, &T.rect);
 	}
-	collisionMask = collisionMask | LayerToBit(layer);
+	SDL_SetRenderTarget(Rendering::GetRenderer(), NULL);
 }
 
-void Collider2D::RemoveCollisionLayer(Layer layer)
+void Light2D::CastLight()
 {
-	// XOR Strategy
-	//0110 // old bitmask
-	//0010 // Layer to remove
-	//0100 // (^) operator new bitmask
-	// Just needs one operator compared too two
-	collisionMask = collisionMask ^ LayerToBit(layer);
-}
 
-bool Collider2D::CanCollide(const Collider2D& other)
-{
-	return (collisionMask & other.collisionMask) != 0; // Compare bits
-}
-
-bool Collider2D::CanCollide(const uint32_t& collisionMask)
-{
-	return (this->collisionMask & collisionMask) != 0;
-}
-
-Layer& Collider2D::GetLayer()
-{
-	return layer;
-}
-uint32_t& Collider2D::GetCollisionMask()
-{
-	return collisionMask;
 }
