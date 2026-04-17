@@ -10,6 +10,7 @@ namespace FractalEngineCore
 	extern unsigned int width;
 	extern unsigned int height;
 	extern float deltaTime;
+	extern unsigned int collisionChecks;
 
 	extern SDL_Window* window;
 }

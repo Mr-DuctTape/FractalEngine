@@ -2,6 +2,7 @@
 #include "../Core/FractalEngineCore.h"
 #include "../EntitySystem/Entities.h"
 #include "../SceneManagement/FractalScene.h"
+#include "../Physics/PhysicsFunctions.h"
 #include <iostream>
 #include <algorithm>
 
@@ -12,7 +13,7 @@ int Rendering::Batch::batchNumber = 0;
 SDL_Renderer* Rendering::m_Renderer = nullptr;
 std::vector<std::unique_ptr<Rendering::Batch>> Rendering::m_Batches = {};
 std::vector<Rendering::Line> Rendering::m_Lines = {};
-std::vector<Rendering::Debug::Box> Rendering::Debug::collisionBoxes = {};
+std::vector<Rendering::Debugger::Box> Rendering::Debugger::collisionBoxes = {};
 
 Rendering::RenderingLayer Rendering::m_lightLayer;
 Rendering::RenderingLayer Rendering::m_spriteLayer;
@@ -20,16 +21,57 @@ Rendering::Batch Rendering::m_ShadowBatch = {};
 
 SDL_Texture* Rendering::lightTexture = nullptr;
 
+bool Rendering::Debugger::DrawSpatialPartioning = {};
+bool Rendering::Debugger::DrawTileMapColliders = {};
+
 unsigned int Rendering::lightUpdateInterval = 2;
 
-bool Rendering::Debug::RenderLight = false;
+void Rendering::Debugger::RenderSpatialPartioning()
+{
+	Physics::SpatialGrid::RenderCells();
+}
+
+void Rendering::Debugger::RenderTileMapColliders()
+{
+	auto& objects = SceneManager::GetCurrentScene()->objects;
+	for (size_t i = 0; i < objects.size(); i++)
+	{
+		if (objects[i]->GetType() != TILEMAP)
+			continue;
+		TileMap* tileMap = static_cast<TileMap*>(objects[i]);
+		auto scale = tileMap->GetTileScale();
+		Vector2 position = tileMap->position;
+		for (size_t y = 0; y < tileMap->_tileGrid.size(); y++)
+		{
+			for (size_t x = 0; x < tileMap->_tileGrid[y].size(); x++)
+			{
+				SDL_FRect dstRect{};
+				dstRect.w = (int)scale.combinedX;
+				dstRect.h = (int)scale.combinedY;
+				dstRect.x = (int)(position.x + (x * dstRect.w));
+				dstRect.y = (int)(position.y + (y * dstRect.h));
+
+				if (!tileMap->IsTileSolid(x, y) && tileMap->debugMode == TileMap::TileDebugMode::FULL)
+				{
+					auto box = tileMap->GetTileCollisionBox(x, y);
+					Rendering::Debugger::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
+				}
+				else if (tileMap->IsTileSolid(x, y) && tileMap->debugMode == TileMap::TileDebugMode::FULL)
+				{
+					auto box = tileMap->GetTileCollisionBox(x, y);
+					Rendering::Debugger::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
+				}
+			}
+		}
+	}
+}
 
 void Rendering::SetLightUpdateInterval(unsigned int interval)
 {
 	lightUpdateInterval = interval;
 }
 
-void Rendering::Debug::DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid)
+void Rendering::Debugger::DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid)
 {
 	SDL_FRect rect;
 	rect.x = box.minX - camera.position.x;
@@ -37,7 +79,7 @@ void Rendering::Debug::DrawCollisionBox(const Components::Collider2D::CollisionB
 	rect.w = box.maxX - box.minX;
 	rect.h = box.maxY - box.minY;
 
-	Rendering::Debug::Box a;
+	Rendering::Debugger::Box a;
 	a.rect = rect;
 	a.color = color;
 	a.solid = solid;
@@ -110,6 +152,14 @@ void Rendering::DrawQuad(float x, float y, float w, float h, float rotation, Com
 	Rendering::Batch* currentBatch = Rendering::_FindOrCreateBatch(sprite);
 
 	SDL_FColor quadColor = toFColor(color);
+
+	if (x + w < camera.position.x ||
+		x > camera.position.x + FractalEngineCore::width ||
+		y + h < camera.position.y ||
+		y > camera.position.y + FractalEngineCore::height)
+	{
+		return;
+	}
 
 	const int startIndex = currentBatch->_Vertices.size();
 	int indices[6] =
@@ -381,8 +431,13 @@ void Rendering::PushToScreen()
 	SDL_SetTextureBlendMode(m_lightLayer.texture, SDL_BLENDMODE_MOD);
 	SDL_RenderTexture(Rendering::GetRenderer(), m_lightLayer.texture, NULL, &screenRect);
 
+
+	SDL_SetRenderDrawBlendMode(Rendering::GetRenderer(), SDL_BLENDMODE_NONE);
+	//if (Rendering::Debugger::DrawSpatialPartioning)
+	//	Rendering::Debugger::RenderSpatialPartioning();
+
 	//Debug drawing
-	for (auto& box : Debug::GetCollisionBoxes())
+	for (auto& box : Debugger::GetCollisionBoxes())
 	{
 		SDL_SetRenderDrawColor(Rendering::GetRenderer(), box.color.r, box.color.g, box.color.b, box.color.a);
 		if (box.solid)
@@ -391,7 +446,7 @@ void Rendering::PushToScreen()
 			SDL_RenderRect(Rendering::GetRenderer(), &box.rect);
 	}
 
-	Debug::GetCollisionBoxes().clear();
+	Debugger::GetCollisionBoxes().clear();
 	SDL_SetRenderDrawColor(Rendering::m_Renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderPresent(Rendering::m_Renderer);
 }

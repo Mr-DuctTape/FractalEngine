@@ -7,6 +7,7 @@ SDL_Window* FractalEngineCore::window = nullptr;
 unsigned int FractalEngineCore::width = 0;
 unsigned int FractalEngineCore::height = 0;
 float FractalEngineCore::deltaTime = 0;
+unsigned int FractalEngineCore::collisionChecks = 0;
 Uint64 previous;
 
 void FractalEngineCore::Initialize()

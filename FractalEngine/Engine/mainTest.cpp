@@ -1,10 +1,9 @@
 #include "FractalEngine.h"
-
+#include "EntitySystem/PrefabManager.h"
 #include <crtdbg.h>
 #include <windows.h>
 #include <psapi.h>
 #include <iostream>
-
 
 
 int main()
@@ -35,7 +34,7 @@ int main()
 	obj3.transform.position = { 600, 500 };
 	obj4.transform.position = { 600, 50 };
 
-	obj.transform.position = { 600, -500 };
+	obj.transform.position = { 1600, 600 };
 	obj2.transform.position = { 400, -200 };
 
 	// Add components
@@ -74,7 +73,7 @@ int main()
 	f->AddCollisionLayer(Layer::PLAYER);
 
 	std::cout << "Collision masks:\n";
-	std::cout << f->GetCollisionMask() << "\n"; 
+	std::cout << f->GetCollisionMask() << "\n";
 	tileMap->SetTileLayer(1, Layer::GROUND);
 	std::cout << "Collision Mask for Tile 1: "
 		<< tileMap->GetTileCollisionMask(1) << '\n';
@@ -89,10 +88,14 @@ int main()
 	std::cout << "Layer for Tile 1: "
 		<< tileMap->GetTileLayer(1) << '\n';
 
+	Physics::SpatialGrid::CreateCells();
+
+	obj.transform.position = { 600, 600 };
+
 	GameObject& obj5 = scene->CreateObject<GameObject>();
 	obj5.AddComponent<Components::Sprite>();
 	auto spr3 = obj5.GetComponent<Components::Sprite>();
-	SDL_Color color  = { 255,255,255,255 };
+	SDL_Color color = { 255,255,255,255 };
 	spr3->texture = nullptr;
 	obj5.transform.position = { 50, 50 };
 
@@ -107,18 +110,22 @@ int main()
 	auto& light3 = scene->CreateObject<Light2D>();
 	light3.transform.position = { 1500, 500 };
 	light3.range = 290;
+
+	PrefabManager::CreatePrefab("Player", obj);
+
+	auto player = PrefabManager::InstantiatePrefab<GameObject>("Player");
+
 	while (FractalEngine::running)
 	{
 		light.transform.position = obj.transform.position;
 		light2.transform.position = obj5.transform.position;
-
 		Vector2 center{ 1500,700 };
 
-		float speed = 0.5f;     // how fast it moves
-		float radius = 800.0f;   // size of the circle
+		float speed = 0.5f;
+		float radius = 800.0f;
 		static float angle = 0.0f;
 
-		angle += speed * FractalEngineCore::deltaTime;  // deltaTime = time since last frame
+		angle += speed * FractalEngineCore::deltaTime;
 
 		obj5.transform.position.x = center.x + cos(angle) * radius;
 		obj5.transform.position.y = center.y + sin(angle) * radius;
@@ -132,13 +139,20 @@ int main()
 		if (Input::GetButtonDown(SDL_SCANCODE_3))
 			SceneManager::LoadScene("Default");
 
+		if (Input::GetButtonDown(SDL_SCANCODE_N))
+			for (size_t i = 0; i < 40; i++)
+				PrefabManager::InstantiatePrefab<GameObject>("Player");
+
+		if (Input::GetButtonDown(SDL_SCANCODE_0))
+			FractalEngine::PrintEngineStatistics();
+
 		if (Input::GetButtonDown(SDL_SCANCODE_F))
-			light.range+= 100;
+			light.range += 100;
 		if (Input::GetButtonDown(SDL_SCANCODE_C))
-			light.range-=100;
+			light.range -= 100;
 
 		if (Input::GetButtonDown(SDL_SCANCODE_J))
-			Rendering::Debug::RenderLight = !Rendering::Debug::RenderLight;
+			Rendering::Debugger::DrawSpatialPartioning = !Rendering::Debugger::DrawSpatialPartioning;
 
 		if (Input::GetButtonDown(SDL_SCANCODE_SPACE))
 			tileMap->debugMode = TileMap::TileDebugMode::FULL;

@@ -14,7 +14,7 @@ struct TilePositions
 class Rendering
 {
 public:
-	class Debug
+	class Debugger
 	{
 	private:
 		struct Box
@@ -25,7 +25,11 @@ public:
 		};
 		static std::vector<Box> collisionBoxes;
 	public:
-		static bool RenderLight;
+		static bool DrawSpatialPartioning;
+		static bool DrawTileMapColliders;
+
+		static void RenderSpatialPartioning();
+		static void RenderTileMapColliders();
 		static void DrawCollisionBox(const Components::Collider2D::CollisionBox& box, const SDL_Color& color, bool solid);
 		static std::vector<Box>& GetCollisionBoxes()
 		{

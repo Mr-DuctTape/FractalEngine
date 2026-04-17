@@ -16,6 +16,7 @@ namespace Components
 		GameObject* parent = nullptr;
 		virtual ~Component() {};
 		virtual void Init(const Vector2 pos) {};
+		virtual uint64_t GetMemoryUsage() { return sizeof(*this); }
 		virtual Component* Clone() = 0;
 	};
 	struct Transform : public Component
@@ -26,6 +27,7 @@ namespace Components
 		{
 			return new Transform(*this);
 		}
+		uint64_t GetMemoryUsage() override { return sizeof(*this); }
 	};
 	struct Sprite : public Component
 	{
@@ -52,6 +54,7 @@ namespace Components
 		{
 			return new Sprite(*this);
 		}
+		uint64_t GetMemoryUsage() override { return sizeof(*this); }
 	};
 	struct Physics2D : public Component
 	{
@@ -81,6 +84,7 @@ namespace Components
 		{
 			return new Physics2D(*this);
 		}
+		uint64_t GetMemoryUsage() override { return sizeof(*this); }
 	};
 	class Animator : public Component
 	{
@@ -134,6 +138,7 @@ namespace Components
 		{
 			return new Animator(*this);
 		}
+		uint64_t GetMemoryUsage() override { return sizeof(*this); }
 	};
 	class Collider2D : public Component
 	{
@@ -178,5 +183,6 @@ namespace Components
 		{
 			return new Collider2D(*this);
 		}
+		uint64_t GetMemoryUsage() override { return sizeof(*this); }
 	};
 }

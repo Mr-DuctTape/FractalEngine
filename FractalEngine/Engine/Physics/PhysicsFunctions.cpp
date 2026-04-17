@@ -4,7 +4,15 @@
 #include "../Core/FractalEngineCore.h"
 #include "../Rendering/RenderingSystem.h"
 
+std::vector<std::vector<Physics::SpatialGrid::Cell>> Physics::SpatialGrid::cells = {};
+int Physics::SpatialGrid::cellSize = 175;
+int Physics::SpatialGrid::width = 50;
+int Physics::SpatialGrid::height = 50;
+
 using namespace Components;
+
+int currentCollisionCount = 0;
+int previousCollisionCount = 0;
 
 inline bool Physics::Functions::CheckCollision(const Components::Collider2D::CollisionBox& a, const Components::Collider2D::CollisionBox& b) // AABB Collision?
 {
@@ -20,11 +28,11 @@ struct TilePosition
 	unsigned int x;
 	unsigned int y;
 };
-void Physics::Functions::Collide(GameObject* obj, Object* obj2)
+inline void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 {
 	if (!obj || !obj2) return;
 	Physics2D* physicsComponent = obj->GetComponent<Physics2D>();
-	if(physicsComponent)
+	if (physicsComponent)
 		physicsComponent->isGrounded = false;
 
 	if (obj2->GetType() == TILEMAP)
@@ -59,18 +67,19 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 			bool tileCollidable = (tileMap->IsTileSolid(x, y) && tileMap->CanTileCollideWith(x, y, obj->GetComponent<Collider2D>()));
 
 			//Tile debug
-			if(tileMap->debugMode == TileMap::TileDebugMode::NEARBY && !tileCollidable)
-				Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 255, 255, 255, 255}, false);
+			if (tileMap->debugMode == TileMap::TileDebugMode::NEARBY && !tileCollidable)
+				Rendering::Debugger::DrawCollisionBox(tileCollisionBox, { 255, 255, 255, 255 }, false);
 			if (tileMap->debugMode == TileMap::TileDebugMode::NEARBY && tileCollidable)
-				Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 255, 0, 0, 96 }, true);
+				Rendering::Debugger::DrawCollisionBox(tileCollisionBox, { 255, 0, 0, 96 }, true);
+			//
 
 			if (tileCollidable && CheckCollision(objectCollisionBox, tileCollisionBox))
 			{
-				if(tileMap->debugMode)
-					Rendering::Debug::DrawCollisionBox(tileCollisionBox, { 40, 255, 40, 128 }, true);
+				if (tileMap->debugMode)
+					Rendering::Debugger::DrawCollisionBox(tileCollisionBox, { 40, 255, 40, 128 }, true);
 
 				Vector2 objectVec = physicsComponent->position_current;
-				Vector2 otherVec = { (tileCollisionBox.minX + tileCollisionBox.maxX) * 0.5f, (tileCollisionBox.minY + tileCollisionBox.maxY) * 0.5f}; // Center of tile
+				Vector2 otherVec = { (tileCollisionBox.minX + tileCollisionBox.maxX) * 0.5f, (tileCollisionBox.minY + tileCollisionBox.maxY) * 0.5f }; // Center of tile
 				Vector2 collision_axis = physicsComponent->position_old - otherVec;
 
 				float overlapX = std::min(objectCollisionBox.maxX, tileCollisionBox.maxX) - std::max(objectCollisionBox.minX, tileCollisionBox.minX);
@@ -114,6 +123,7 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 		Vector2 otherVec = (otherComponent) ? otherComponent->position_current : other->transform.position;
 		Vector2 collision_axis = objectVec - otherVec;
 
+		++currentCollisionCount;
 		if (CheckCollision(obj->GetCollisionBox(), other->GetCollisionBox()))
 		{
 			auto A = obj->GetCollisionBox();
@@ -148,6 +158,8 @@ void Physics::Functions::Collide(GameObject* obj, Object* obj2)
 inline void Physics::Functions::Gravity(Physics2D* phys)
 {
 	if (!phys) return;
+	if (!phys->useGravity) return;
+
 	const Vector2 worldGravity = { 0, 1000.0f };
 	phys->Accelerate(worldGravity);
 }
@@ -166,32 +178,99 @@ inline void Physics::Functions::Movement(GameObject* obj, Components::Physics2D*
 	obj->transform.position = physComp->position_current;
 	physComp->acceleration = { 0,0 };
 }
-void Physics::Functions::UpdatePhysics(GameObject* object)
+
+struct Positions
+{
+	int x, y;
+};
+inline void Physics::Functions::UpdatePhysics(GameObject* object)
 {
 	Physics2D* physicsComponent = object->GetComponent<Physics2D>();
-	auto& objectList = SceneManager::GetCurrentScene()->objects;
+	if (!physicsComponent)
+		return;
 	Gravity(physicsComponent);
 	Movement(object, physicsComponent);
 
-	for (size_t j = 0; j < objectList.size(); j++)
+	auto& tileMapList = SceneManager::GetCurrentScene()->objects;
+	for (size_t i = 0; i < tileMapList.size(); i++)
 	{
-		if (objectList[j]->GetType() != GAMEOBJECT && objectList[j]->GetType() != TILEMAP)
+		if (tileMapList[i]->GetType() != TILEMAP)
 			continue;
-		if (objectList[j]->GetType() == GAMEOBJECT)
+
+		Collide(object, tileMapList[i]);
+	}
+
+	int posX = object->transform.position.x / Physics::SpatialGrid::cellSize;
+	int posY = object->transform.position.y / Physics::SpatialGrid::cellSize;
+	Physics::SpatialGrid::Cell* cells[9] = {};
+	Positions positions[9] =
+	{
+		{posX, posY},
+		{posX - 1, posY},
+		{posX + 1, posY},
+		{posX, posY + 1},
+		{posX, posY - 1},
+		{posX - 1, posY + 1},
+		{posX + 1, posY + 1},
+		{posX - 1, posY - 1},
+		{posX + 1, posY - 1},
+	};
+
+	unsigned int size = sizeof(positions) / sizeof(positions[0]);
+	for (size_t i = 0; i < size; i++)
+	{
+		cells[i] = Physics::SpatialGrid::GetCell(positions[i].x, positions[i].y);
+	}
+	for (size_t i = 0; i < size; i++)
+	{
+		if (cells[i] == nullptr)
+			continue;
+		auto& list = cells[i]->objects;
+
+		//Debugging, just ignore this
+
+		if (list.empty())
 		{
-			GameObject* other = static_cast<GameObject*>(objectList[j]);
+			if (Rendering::Debugger::DrawSpatialPartioning)
+				Physics::SpatialGrid::RenderCell(positions[i].x, positions[i].y, { 255, 0, 0, 50 }, true);
+			continue;
+		}
+		else
+		{
+			if (Rendering::Debugger::DrawSpatialPartioning)
+				Physics::SpatialGrid::RenderCell(positions[i].x, positions[i].y, { 0, 255, 0 ,50 }, true);
+		}
+
+		for (size_t j = 0; j < list.size(); j++)
+		{
+			if (list[j]->GetType() != GAMEOBJECT)
+				continue;
+
+			GameObject* other = static_cast<GameObject*>(list[j]);
 			if (other == object)
 				continue;
+
+			Collide(object, list[j]);
 		}
-		Collide(object, objectList[j]);
 	}
 }
 void Physics::Run(std::vector<Object*>& objects) // Physics simulation on all GameObjects with Physics2D component
 {
+	static int frame = 0;
+	frame++;
+	previousCollisionCount = currentCollisionCount;
+	Physics::SpatialGrid::Clear();
+	for (size_t i = 0; i < objects.size(); i++)
+	{
+		if (objects[i]->GetType() != Type::GAMEOBJECT) continue;
+		GameObject* obj = static_cast<GameObject*>(objects[i]);
+		Physics::SpatialGrid::InsertObject(obj);
+	}
 	for (size_t i = 0; i < objects.size(); i++)
 	{
 		if (objects[i]->GetType() != Type::GAMEOBJECT) continue;
 		GameObject* obj = static_cast<GameObject*>(objects[i]);
 		Functions::UpdatePhysics(obj);
 	}
+	FractalEngineCore::collisionChecks = currentCollisionCount - previousCollisionCount;
 }

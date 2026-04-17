@@ -46,4 +46,5 @@ public:
 		if (FractalEngineCore::window)
 			SDL_DestroyWindow(FractalEngineCore::window);
 	}
+	static void PrintEngineStatistics();
 };

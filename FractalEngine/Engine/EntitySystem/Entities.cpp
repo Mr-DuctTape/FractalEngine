@@ -297,12 +297,12 @@ void TileMap::Render()
 				if (!IsTileSolid(x, y))
 				{
 					auto box = GetTileCollisionBox(x, y);
-					Rendering::Debug::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
+					Rendering::Debugger::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
 				}
 				else if (IsTileSolid(x, y))
 				{
 					auto box = GetTileCollisionBox(x, y);
-					Rendering::Debug::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
+					Rendering::Debugger::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
 				}
 			}
 
@@ -335,17 +335,6 @@ void TileMap::Render()
 
 			Tile tile{ dstRect, *lightLevel, tileID };
 			Tiles.push_back(tile);
-
-			if (!IsTileSolid(x, y) && debugMode == TileDebugMode::FULL)
-			{
-				auto box = GetTileCollisionBox(x, y);
-				Rendering::Debug::DrawCollisionBox(box, { 255, 255, 255, 255 }, false);
-			}
-			else if (IsTileSolid(x, y) && debugMode == TileDebugMode::FULL)
-			{
-				auto box = GetTileCollisionBox(x, y);
-				Rendering::Debug::DrawCollisionBox(box, { 255, 0, 0, 96 }, true);
-			}
 		}
 	}
 
@@ -355,13 +344,6 @@ void TileMap::Render()
 	{
 		SDL_Color color{ 255,255,255,255 };
 		srcRect.x = srcRect.w * T.ID;
-		float light = (T.lightLevel + 1.0f) * 0.5f;
-		color = {
-			(Uint8)(color.r * light),
-			(Uint8)(color.g * light),
-			(Uint8)(color.b * light),
-			color.a
-		};
 		SDL_SetTextureColorMod(_currentTileSet.spriteSheet, color.r, color.g, color.b);
 		SDL_RenderTexture(Rendering::GetRenderer(), _currentTileSet.spriteSheet, &srcRect, &T.rect);
 	}

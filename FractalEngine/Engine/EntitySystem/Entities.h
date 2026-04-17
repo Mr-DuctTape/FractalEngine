@@ -20,6 +20,14 @@ class Object
 public:
 	virtual ~Object() {};
 	virtual Type GetType() { return Type::OBJECT; };
+	virtual Object* Clone() const
+	{
+		return new Object(*this);
+	}
+	virtual size_t GetMemoryUsage() 
+	{
+		return sizeof(Object);
+	}
 };
 class Rendering;
 class TileMap : public Object
@@ -121,6 +129,15 @@ public:
 	}
 
 	void Render();
+
+	Object* Clone() const override
+	{
+		return new TileMap(*this);
+	}
+	size_t GetMemoryUsage() override 
+	{
+		return sizeof(TileMap);
+	}
 };
 class GameObject : public Object
 {
@@ -154,21 +171,22 @@ public:
 	};
 	inline Components::Collider2D::CollisionBox GetCollisionBox()
 	{
-		if (HasComponent<Components::Collider2D>())
+		Components::Collider2D* coll = GetComponent<Components::Collider2D>();
+		SDL_FRect& rect = GetRect();
+		if (coll)
 		{
-			Components::Collider2D* coll = GetComponent<Components::Collider2D>();
 			coll->collisionBox.minY = transform.position.y;
-			coll->collisionBox.maxY = transform.position.y + GetRect().h;
+			coll->collisionBox.maxY = transform.position.y + rect.h;
 			coll->collisionBox.minX = transform.position.x;
-			coll->collisionBox.maxX = transform.position.x + GetRect().w;
+			coll->collisionBox.maxX = transform.position.x + rect.w;
 			return coll->collisionBox;
 		}
 		return Components::Collider2D::CollisionBox
 		{
 			transform.position.y,                 // minY
-			transform.position.y + GetRect().h,  // maxY
+			transform.position.y + rect.h,  // maxY
 			transform.position.x,                 // minX
-			transform.position.x + GetRect().w    // maxX
+			transform.position.x + rect.w    // maxX
 		};
 	}
 	size_t GetComponentAmount() const
@@ -261,17 +279,45 @@ public:
 		ID = ++IDNumber;
 		objComponents.push_back(&transform);
 	}
-	GameObject(const GameObject& other)	: 
-		ID(++IDNumber), 
-		rect(other.rect), 
+	GameObject(const GameObject& other) :
+		ID(++IDNumber),
+		rect(other.rect),
 		transform(other.transform)
 	{
 		objComponents.reserve(other.objComponents.size());
-		for (auto* x : other.objComponents)
+		for (auto& x : other.objComponents)
 		{
-			if(x)
+			if (x)
+			{
+				if (x == &other.transform) continue;
 				objComponents.push_back(x->Clone());
+			}
 		}
+	}
+
+	GameObject& operator=(const GameObject& other)
+	{
+		if (this == &other) return *this;
+
+		rect = other.rect;
+		transform = other.transform;
+
+		for (auto comp : objComponents)
+		{
+			delete comp;
+		}
+		objComponents.clear();
+
+		objComponents.reserve(other.objComponents.size());
+		for (auto& x : other.objComponents)
+		{
+			if (x)
+			{
+				if (x == &other.transform) continue;
+				objComponents.push_back(x->Clone());
+			}
+		}
+		return *this;
 	}
 	~GameObject()
 	{
@@ -280,6 +326,21 @@ public:
 			if (objComp == &transform) continue;
 			delete objComp;
 		}
+	}
+
+	Object* Clone() const override
+	{
+		return new GameObject(*this);
+	}
+	size_t GetMemoryUsage() override 
+	{
+		size_t memory = 0;
+		for (auto& comp : objComponents)
+		{
+			memory += comp->GetMemoryUsage();
+		}
+		memory += sizeof(*this);
+		return memory;
 	}
 };
 class Camera
@@ -295,7 +356,8 @@ public:
 class Light2D : public Object
 {
 public:
-	Type GetType() override{
+	Type GetType() override
+	{
 		return Type::LIGHT;
 	}
 	Components::Transform transform = {};

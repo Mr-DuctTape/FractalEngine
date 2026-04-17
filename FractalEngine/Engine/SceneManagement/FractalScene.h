@@ -30,7 +30,6 @@ public:
 	template <typename T> //Creates object on the current active scene
 	T& CreateObject()
 	{
-		static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
 		auto location = new T();
 		objects.push_back(location);
 		return *location;
@@ -38,8 +37,7 @@ public:
 	template <typename T>
 	T& CreateObject(const T& value)
 	{
-		static_assert(std::is_base_of_v<Object, T>, "T must be an Object!");
-		auto location = new T(value);
+		auto location = new T(value); 
 		objects.push_back(location);
 		return *location;
 	}
